@@ -308,7 +308,21 @@ const ExcelUploadModal = ({ isOpen, onClose, onUpload }) => {
                 </div>
 
                 <div className="space-y-6">
-                    <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-admin-primary/50 transition-colors bg-white/5">
+                    <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-admin-primary/50 transition-colors bg-white/5 relative">
+                        <button
+                            onClick={() => {
+                                const ws = XLSX.utils.json_to_sheet([
+                                    { Year: 2024, Grade: 1, Name: "Hong Gildong", StudentId: "student01", Password: "123" }
+                                ]);
+                                const wb = XLSX.utils.book_new();
+                                XLSX.utils.book_append_sheet(wb, ws, "Students");
+                                XLSX.writeFile(wb, "student_upload_template.xlsx");
+                            }}
+                            className="absolute top-4 right-4 text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+                        >
+                            <span className="material-symbols-outlined text-[14px]">download</span>
+                            Template
+                        </button>
                         <input
                             type="file"
                             accept=".xlsx, .xls"
@@ -510,8 +524,8 @@ const LearnersManagement = ({ registeredStudents, onAddStudent, onDeleteStudent,
                             onChange={(e) => setFilterYear(e.target.value)}
                             className="bg-white/5 border border-white/10 rounded-lg text-sm text-white px-3 py-1.5 focus:outline-none focus:border-admin-primary"
                         >
-                            <option value="all">All Years</option>
-                            {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                            <option value="all" className="bg-gray-800">All Years</option>
+                            {availableYears.map(y => <option key={y} value={y} className="bg-gray-800">{y}</option>)}
                         </select>
                     </div>
                     <div className="flex items-center gap-2">
@@ -521,8 +535,8 @@ const LearnersManagement = ({ registeredStudents, onAddStudent, onDeleteStudent,
                             onChange={(e) => setFilterGrade(e.target.value)}
                             className="bg-white/5 border border-white/10 rounded-lg text-sm text-white px-3 py-1.5 focus:outline-none focus:border-admin-primary"
                         >
-                            <option value="all">All Grades</option>
-                            {[1, 2, 3].map(g => <option key={g} value={g}>Grade {g}</option>)}
+                            <option value="all" className="bg-gray-800">All Grades</option>
+                            {[1, 2, 3].map(g => <option key={g} value={g} className="bg-gray-800">Grade {g}</option>)}
                         </select>
                     </div>
                 </div>
@@ -687,9 +701,9 @@ const LearnersManagement = ({ registeredStudents, onAddStudent, onDeleteStudent,
                                         onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
                                         className="w-full bg-background-dark border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-admin-primary transition-colors appearance-none cursor-pointer"
                                     >
-                                        <option value="1">Grade 1</option>
-                                        <option value="2">Grade 2</option>
-                                        <option value="3">Grade 3</option>
+                                        <option value="1" className="bg-gray-800">Grade 1</option>
+                                        <option value="2" className="bg-gray-800">Grade 2</option>
+                                        <option value="3" className="bg-gray-800">Grade 3</option>
                                     </select>
                                 </div>
                             </div>
