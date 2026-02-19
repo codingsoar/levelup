@@ -76,6 +76,15 @@ export const useProgressStore = create(
             getAllStudentProgress: () => {
                 return get().progress;
             },
+
+            // --- Admin Actions ---
+            clearAllProgress: () => {
+                set({
+                    progress: {},
+                    totalStars: {},
+                    submissions: []
+                });
+            }
         }),
         { name: 'starquest-progress' }
     )
