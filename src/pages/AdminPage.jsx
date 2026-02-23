@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { useProgressStore } from '../stores/useProgressStore';
 import { useStageStore } from '../stores/useStageStore';
 import useThemeStore from '../stores/useThemeStore';
+import { useMarketplaceStore } from '../stores/useMarketplaceStore';
 import DashboardCalendar from '../components/DashboardCalendar';
 // --- Sub-components for Views ---
 
@@ -989,7 +990,7 @@ const MissionEditorModal = ({ isOpen, onClose, mission, onSave, difficulty }) =>
                             <textarea
                                 value={formData.taskDescription}
                                 onChange={e => setFormData({ ...formData, taskDescription: e.target.value })}
-                                className="w-full bg-background-dark border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-admin-primary focus:outline-none h-32"
+                                className="w-full bg-background-dark border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-admin-primary focus:outline-none h-[512px]"
                                 placeholder="Describe the task..."
                             />
                         </div>
@@ -1814,6 +1815,381 @@ const AssessmentsManagement = ({ courses, registeredStudents }) => {
     );
 };
 
+function MarketplaceManagement() {
+    const { shopItems, purchases, addShopItem, removeShopItem, updateShopItems, deliverPurchase } = useMarketplaceStore();
+    const { registeredStudents } = useAuthStore();
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [editingItem, setEditingItem] = useState(null);
+    const [activeSubTab, setActiveSubTab] = useState('items');
+    const [newItem, setNewItem] = useState({ name: '', description: '', price: 5, icon: '🎁', category: 'food', stock: 99 });
+
+    const categoryLabels = { food: '간식', privilege: '특권', reward: '보상', item: '문구' };
+    const categoryIcons = { food: '🍪', privilege: '🏆', reward: '⭐', item: '✏️' };
+
+    const handleAddItem = () => {
+        if (!newItem.name.trim()) return;
+        addShopItem(newItem);
+        setNewItem({ name: '', description: '', price: 5, icon: '🎁', category: 'food', stock: 99 });
+        setShowAddModal(false);
+    };
+
+    const handleEditItem = () => {
+        if (!editingItem) return;
+        updateShopItems(shopItems.map(item => item.id === editingItem.id ? editingItem : item));
+        setEditingItem(null);
+    };
+
+    const pendingPurchases = purchases.filter(p => p.status === 'pending');
+    const deliveredPurchases = purchases.filter(p => p.status === 'delivered');
+
+    const getStudentName = (studentId) => {
+        const s = registeredStudents.find(st => st.studentId === studentId);
+        return s ? s.name : studentId;
+    };
+
+    return (
+        <div className="space-y-6">
+            {/* Sub-tabs */}
+            <div className="flex gap-3">
+                <button
+                    onClick={() => setActiveSubTab('items')}
+                    className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeSubTab === 'items' ? 'bg-admin-secondary text-white shadow-lg shadow-admin-secondary/30' : 'bg-admin-card-dark text-gray-400 hover:text-white'}`}
+                >
+                    <span className="material-symbols-outlined text-sm mr-1.5 align-text-bottom">inventory_2</span>
+                    상품 관리 ({shopItems.length})
+                </button>
+                <button
+                    onClick={() => setActiveSubTab('orders')}
+                    className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeSubTab === 'orders' ? 'bg-admin-secondary text-white shadow-lg shadow-admin-secondary/30' : 'bg-admin-card-dark text-gray-400 hover:text-white'}`}
+                >
+                    <span className="material-symbols-outlined text-sm mr-1.5 align-text-bottom">receipt_long</span>
+                    주문 처리
+                    {pendingPurchases.length > 0 && (
+                        <span className="ml-2 bg-admin-pink text-white text-xs px-1.5 py-0.5 rounded-full">{pendingPurchases.length}</span>
+                    )}
+                </button>
+            </div>
+
+            {/* Items Management Tab */}
+            {activeSubTab === 'items' && (
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                        <p className="text-gray-400 text-sm">학생 마켓플레이스에 표시되는 상품을 관리합니다.</p>
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="px-4 py-2 bg-admin-secondary text-white rounded-xl text-sm font-semibold hover:bg-admin-secondary/80 transition-all flex items-center gap-1.5 shadow-lg shadow-admin-secondary/20"
+                        >
+                            <span className="material-symbols-outlined text-sm">add</span>
+                            상품 추가
+                        </button>
+                    </div>
+
+                    {/* Items Table */}
+                    <div className="bg-admin-card-dark rounded-xl border border-white/5 overflow-hidden">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-white/5">
+                                    <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider">상품</th>
+                                    <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider">카테고리</th>
+                                    <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider">가격 (⭐)</th>
+                                    <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider">재고</th>
+                                    <th className="text-right px-5 py-3 text-xs text-gray-500 uppercase tracking-wider">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {shopItems.map(item => (
+                                    <tr key={item.id} className="hover:bg-white/5 transition-colors">
+                                        <td className="px-5 py-3">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl">{item.icon}</span>
+                                                <div>
+                                                    <p className="text-white text-sm font-medium">{item.name}</p>
+                                                    <p className="text-gray-500 text-xs">{item.description}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-5 py-3">
+                                            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-white/10 text-gray-300">
+                                                {categoryIcons[item.category]} {categoryLabels[item.category] || item.category}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-3 text-center">
+                                            <span className="text-amber-400 font-bold text-sm">⭐ {item.price}</span>
+                                        </td>
+                                        <td className="px-5 py-3 text-center">
+                                            <span className={`text-sm font-medium ${item.stock <= 5 ? 'text-red-400' : 'text-gray-300'}`}>
+                                                {item.stock}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-3 text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => setEditingItem({ ...item })}
+                                                    className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-admin-secondary transition-colors"
+                                                    title="수정"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">edit</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => { if (confirm(`"${item.name}" 상품을 삭제하시겠습니까?`)) removeShopItem(item.id); }}
+                                                    className="p-1.5 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors"
+                                                    title="삭제"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">delete</span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Orders Tab */}
+            {activeSubTab === 'orders' && (
+                <div className="space-y-6">
+                    {/* Pending */}
+                    <div>
+                        <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-amber-400">pending_actions</span>
+                            대기 중인 주문 ({pendingPurchases.length})
+                        </h3>
+                        {pendingPurchases.length === 0 ? (
+                            <div className="bg-admin-card-dark rounded-xl p-8 text-center text-gray-500 border border-white/5">
+                                대기 중인 주문이 없습니다.
+                            </div>
+                        ) : (
+                            <div className="bg-admin-card-dark rounded-xl border border-white/5 divide-y divide-white/5">
+                                {purchases.map((purchase, idx) => purchase.status === 'pending' && (
+                                    <div key={idx} className="flex items-center justify-between px-5 py-3 hover:bg-white/5 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-2xl">{purchase.itemIcon}</span>
+                                            <div>
+                                                <p className="text-white text-sm font-medium">{purchase.itemName}</p>
+                                                <p className="text-gray-500 text-xs">
+                                                    {getStudentName(purchase.studentId)} ({purchase.studentId}) · {new Date(purchase.timestamp).toLocaleString('ko-KR')}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-amber-400 text-sm font-bold">⭐ {purchase.price}</span>
+                                            <button
+                                                onClick={() => deliverPurchase(idx)}
+                                                className="px-3 py-1.5 bg-admin-secondary text-white text-xs font-semibold rounded-lg hover:bg-admin-secondary/80 transition-all"
+                                            >
+                                                수령 완료
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    {/* Delivered */}
+                    <div>
+                        <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-green-400">check_circle</span>
+                            완료된 주문 ({deliveredPurchases.length})
+                        </h3>
+                        {deliveredPurchases.length === 0 ? (
+                            <div className="bg-admin-card-dark rounded-xl p-8 text-center text-gray-500 border border-white/5">
+                                완료된 주문이 없습니다.
+                            </div>
+                        ) : (
+                            <div className="bg-admin-card-dark rounded-xl border border-white/5 divide-y divide-white/5 max-h-80 overflow-y-auto">
+                                {purchases.map((purchase, idx) => purchase.status === 'delivered' && (
+                                    <div key={idx} className="flex items-center justify-between px-5 py-3 opacity-60">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-2xl">{purchase.itemIcon}</span>
+                                            <div>
+                                                <p className="text-white text-sm font-medium">{purchase.itemName}</p>
+                                                <p className="text-gray-500 text-xs">
+                                                    {getStudentName(purchase.studentId)} ({purchase.studentId}) · {new Date(purchase.timestamp).toLocaleString('ko-KR')}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <span className="text-green-400 text-xs font-medium px-2 py-0.5 rounded-full bg-green-400/10">수령 완료</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Add Item Modal */}
+            {showAddModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowAddModal(false)}>
+                    <div className="bg-admin-card-dark rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-white text-lg font-bold mb-4 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-admin-secondary">add_circle</span>
+                            새 상품 추가
+                        </h3>
+                        <div className="space-y-3">
+                            <div className="flex gap-3">
+                                <div className="w-20">
+                                    <label className="block text-xs text-gray-500 mb-1">아이콘</label>
+                                    <input
+                                        value={newItem.icon}
+                                        onChange={e => setNewItem({ ...newItem, icon: e.target.value })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-center text-xl focus:outline-none focus:ring-1 focus:ring-admin-secondary"
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-xs text-gray-500 mb-1">상품명</label>
+                                    <input
+                                        value={newItem.name}
+                                        onChange={e => setNewItem({ ...newItem, name: e.target.value })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
+                                        placeholder="상품명 입력"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs text-gray-500 mb-1">설명</label>
+                                <input
+                                    value={newItem.description}
+                                    onChange={e => setNewItem({ ...newItem, description: e.target.value })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
+                                    placeholder="상품 설명"
+                                />
+                            </div>
+                            <div className="flex gap-3">
+                                <div className="flex-1">
+                                    <label className="block text-xs text-gray-500 mb-1">카테고리</label>
+                                    <select
+                                        value={newItem.category}
+                                        onChange={e => setNewItem({ ...newItem, category: e.target.value })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
+                                    >
+                                        <option value="food">🍪 간식</option>
+                                        <option value="privilege">🏆 특권</option>
+                                        <option value="reward">⭐ 보상</option>
+                                        <option value="item">✏️ 문구</option>
+                                    </select>
+                                </div>
+                                <div className="w-24">
+                                    <label className="block text-xs text-gray-500 mb-1">가격 (⭐)</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={newItem.price}
+                                        onChange={e => setNewItem({ ...newItem, price: parseInt(e.target.value) || 1 })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
+                                    />
+                                </div>
+                                <div className="w-24">
+                                    <label className="block text-xs text-gray-500 mb-1">재고</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={newItem.stock}
+                                        onChange={e => setNewItem({ ...newItem, stock: parseInt(e.target.value) || 0 })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 mt-5">
+                            <button onClick={() => setShowAddModal(false)} className="flex-1 py-2.5 bg-white/5 text-gray-400 rounded-xl text-sm font-medium hover:bg-white/10 transition-colors">
+                                취소
+                            </button>
+                            <button onClick={handleAddItem} className="flex-1 py-2.5 bg-admin-secondary text-white rounded-xl text-sm font-semibold hover:bg-admin-secondary/80 transition-all shadow-lg shadow-admin-secondary/20">
+                                추가
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Item Modal */}
+            {editingItem && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setEditingItem(null)}>
+                    <div className="bg-admin-card-dark rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-white text-lg font-bold mb-4 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-admin-secondary">edit</span>
+                            상품 수정
+                        </h3>
+                        <div className="space-y-3">
+                            <div className="flex gap-3">
+                                <div className="w-20">
+                                    <label className="block text-xs text-gray-500 mb-1">아이콘</label>
+                                    <input
+                                        value={editingItem.icon}
+                                        onChange={e => setEditingItem({ ...editingItem, icon: e.target.value })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-center text-xl focus:outline-none focus:ring-1 focus:ring-admin-secondary"
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-xs text-gray-500 mb-1">상품명</label>
+                                    <input
+                                        value={editingItem.name}
+                                        onChange={e => setEditingItem({ ...editingItem, name: e.target.value })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs text-gray-500 mb-1">설명</label>
+                                <input
+                                    value={editingItem.description}
+                                    onChange={e => setEditingItem({ ...editingItem, description: e.target.value })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
+                                />
+                            </div>
+                            <div className="flex gap-3">
+                                <div className="flex-1">
+                                    <label className="block text-xs text-gray-500 mb-1">카테고리</label>
+                                    <select
+                                        value={editingItem.category}
+                                        onChange={e => setEditingItem({ ...editingItem, category: e.target.value })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
+                                    >
+                                        <option value="food">🍪 간식</option>
+                                        <option value="privilege">🏆 특권</option>
+                                        <option value="reward">⭐ 보상</option>
+                                        <option value="item">✏️ 문구</option>
+                                    </select>
+                                </div>
+                                <div className="w-24">
+                                    <label className="block text-xs text-gray-500 mb-1">가격 (⭐)</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={editingItem.price}
+                                        onChange={e => setEditingItem({ ...editingItem, price: parseInt(e.target.value) || 1 })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
+                                    />
+                                </div>
+                                <div className="w-24">
+                                    <label className="block text-xs text-gray-500 mb-1">재고</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={editingItem.stock}
+                                        onChange={e => setEditingItem({ ...editingItem, stock: parseInt(e.target.value) || 0 })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 mt-5">
+                            <button onClick={() => setEditingItem(null)} className="flex-1 py-2.5 bg-white/5 text-gray-400 rounded-xl text-sm font-medium hover:bg-white/10 transition-colors">
+                                취소
+                            </button>
+                            <button onClick={handleEditItem} className="flex-1 py-2.5 bg-admin-secondary text-white rounded-xl text-sm font-semibold hover:bg-admin-secondary/80 transition-all shadow-lg shadow-admin-secondary/20">
+                                저장
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 const SettingsManagement = () => {
     const { user } = useAuthStore();
     const { isDark, toggleTheme } = useThemeStore();
@@ -2007,6 +2383,17 @@ export default function AdminPage() {
                         <span className="material-symbols-outlined group-hover:scale-110 transition-transform text-white">quiz</span>
                         <span className={`font-medium ${currentView === 'assessments' ? 'text-white' : 'text-white/80 group-hover:text-white'}`}>Assessments</span>
                     </button>
+                    {/* Marketplace */}
+                    <button
+                        onClick={() => setCurrentView('marketplace')}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg w-full text-left transition-all group ${currentView === 'marketplace'
+                            ? 'bg-admin-secondary shadow-lg shadow-admin-secondary/20'
+                            : 'hover:bg-white/10 text-white/80 hover:text-white'
+                            }`}
+                    >
+                        <span className="material-symbols-outlined group-hover:scale-110 transition-transform text-white">storefront</span>
+                        <span className={`font-medium ${currentView === 'marketplace' ? 'text-white' : 'text-white/80 group-hover:text-white'}`}>Marketplace</span>
+                    </button>
                     {/* Settings */}
                     <button
                         onClick={() => setCurrentView('settings')}
@@ -2111,10 +2498,13 @@ export default function AdminPage() {
                             registeredStudents={registeredStudents}
                         />
                     )}
+                    {currentView === 'marketplace' && (
+                        <MarketplaceManagement />
+                    )}
                     {currentView === 'settings' && (
                         <SettingsManagement />
                     )}
-                    {currentView !== 'dashboard' && currentView !== 'learners' && currentView !== 'class' && currentView !== 'assessments' && currentView !== 'settings' && (
+                    {currentView !== 'dashboard' && currentView !== 'learners' && currentView !== 'class' && currentView !== 'assessments' && currentView !== 'marketplace' && currentView !== 'settings' && (
                         <div className="flex items-center justify-center h-full text-gray-500">
                             Component for {currentView} is under construction.
                         </div>

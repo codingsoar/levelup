@@ -77,6 +77,16 @@ export const useProgressStore = create(
                 return get().progress;
             },
 
+            // Spend stars (for marketplace purchases)
+            spendStars: (studentId, amount) => {
+                const current = get().totalStars[studentId] || 0;
+                if (current < amount) return false;
+                set(state => ({
+                    totalStars: { ...state.totalStars, [studentId]: current - amount },
+                }));
+                return true;
+            },
+
             // --- Admin Actions ---
             clearAllProgress: () => {
                 set({

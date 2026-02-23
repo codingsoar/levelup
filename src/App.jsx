@@ -7,6 +7,8 @@ import StudentLoginPage from './pages/StudentLoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import StudentDashboardPage from './pages/StudentDashboardPage';
 import ProfilePage from './pages/ProfilePage';
+import StudentProfilePage from './pages/StudentProfilePage';
+import MarketplacePage from './pages/MarketplacePage';
 import AdminPage from './pages/AdminPage';
 
 function ProtectedRoute({ children, adminOnly }) {
@@ -32,6 +34,9 @@ export default function App() {
             <Route path="/" element={<StudentLoginPage />} />
             <Route path="/admin-login" element={<AdminLoginPage />} />
             <Route path="/dashboard" element={<ProtectedRoute><StudentDashboardPage /></ProtectedRoute>} />
+            <Route path="/student-profile" element={<ProtectedRoute><StudentProfilePage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+            <Route path="/marketplace" element={<ProtectedRoute><MarketplacePage /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute adminOnly><AdminPage /></ProtectedRoute>} />
           </Routes>

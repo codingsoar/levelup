@@ -1,115 +1,168 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardBody, Button, Chip, Progress } from '@heroui/react';
-import { Star, ChevronLeft, User, BookOpen, Sun, Moon } from 'lucide-react';
+import { Button } from '@heroui/react';
 import { useAuthStore } from '../stores/useAuthStore';
-import { useProgressStore } from '../stores/useProgressStore';
-import { useStageStore } from '../stores/useStageStore';
-import useThemeStore from '../stores/useThemeStore';
+import StudentLayout from '../components/StudentLayout';
 
 export default function ProfilePage() {
     const navigate = useNavigate();
-    const { user, logout } = useAuthStore();
-    const { courses } = useStageStore();
-    const { progress, totalStars } = useProgressStore();
-    const { isDark, toggleTheme } = useThemeStore();
+    const { user, logout, changePassword } = useAuthStore();
+    const [showPwChange, setShowPwChange] = useState(false);
+    const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
+    const [pwMsg, setPwMsg] = useState(null);
 
-    const studentStars = totalStars[user?.studentId] || 0;
-    const assignedCourseIds = user?.courseIds || [];
-    const visibleCourses = courses.filter((course) => assignedCourseIds.includes(course.id));
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
 
     return (
-        <div className="min-h-screen p-4 md:p-8" style={{ background: 'var(--sq-bg)', color: 'var(--sq-text)' }}>
-            <div className="max-w-3xl mx-auto space-y-8">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Button isIconOnly variant="flat" onPress={() => navigate('/courses')}>
-                            <ChevronLeft size={20} />
-                        </Button>
-                        <h1 className="text-2xl font-bold">프로필</h1>
+        <StudentLayout>
+            <div className="min-h-full bg-background-light font-display">
+                {/* Header */}
+                <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-accent-purple/20">
+                    <div className="max-w-3xl mx-auto flex items-center justify-between px-4 md:px-8 py-4">
+                        <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-slate-600">settings</span>
+                            설정
+                        </h1>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={toggleTheme}
-                            className="p-2 rounded-lg transition-all hover:scale-110"
-                            style={{ background: 'var(--sq-card-bg)', border: '1px solid var(--sq-card-border)', color: 'var(--sq-primary)' }}
-                        >
-                            {isDark ? <Sun size={16} /> : <Moon size={16} />}
-                        </button>
-                        <Button size="sm" variant="flat" color="danger" onPress={() => { logout(); navigate('/'); }}>
-                            로그아웃
-                        </Button>
-                    </div>
-                </div>
+                </header>
 
-                <Card className="sq-card">
-                    <CardBody className="p-6 flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, var(--sq-primary), #2b5a91)' }}>
-                            <User size={32} className="text-white" />
-                        </div>
-                        <div className="flex-1">
-                            <h2 className="text-xl font-bold">{user?.name}</h2>
-                            <p className="text-sm" style={{ color: 'var(--sq-muted)' }}>학번: {user?.studentId}</p>
-                        </div>
-                        <div className="flex gap-3">
-                            <Chip color="warning" variant="flat" startContent={<Star size={14} className="text-amber-400" />}>
-                                ★ {studentStars}
-                            </Chip>
-                            <Chip variant="flat" startContent={<BookOpen size={14} />} style={{ color: 'var(--sq-primary)' }}>
-                                {visibleCourses.length} 과목
-                            </Chip>
-                        </div>
-                    </CardBody>
-                </Card>
-
-                <div className="space-y-4">
-                    <h3 className="text-lg font-bold">과목별 진행도</h3>
-                    {visibleCourses.length === 0 && (
-                        <Card className="sq-card">
-                            <CardBody className="p-4">
-                                <p style={{ color: 'var(--sq-muted)' }}>등록된 과목이 없습니다.</p>
-                            </CardBody>
-                        </Card>
-                    )}
-                    {visibleCourses.map((course) => {
-                        const stagesComplete = course.stages.filter((stage) => {
-                            const sp = progress?.[user?.studentId]?.[course.id]?.[stage.id];
-                            return sp?.easy && sp?.normal && sp?.hard;
-                        }).length;
-                        const pct = course.stages.length > 0 ? Math.round((stagesComplete / course.stages.length) * 100) : 0;
-
-                        return (
-                            <Card key={course.id} className="sq-card">
-                                <CardBody className="p-4 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-2xl">{course.icon}</span>
-                                            <span className="font-semibold">{course.title}</span>
+                <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 space-y-8">
+                    {/* Account Section */}
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-slate-600">manage_accounts</span>
+                            계정
+                        </h3>
+                        <div className="bg-white rounded-xl border border-accent-purple/20 shadow-card divide-y divide-slate-100">
+                            <div className="flex items-center justify-between p-4">
+                                <div className="flex items-center gap-3">
+                                    <span className="material-symbols-outlined text-slate-400">badge</span>
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-800">이름</p>
+                                        <p className="text-xs text-slate-500">{user?.name}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between p-4">
+                                <div className="flex items-center gap-3">
+                                    <span className="material-symbols-outlined text-slate-400">school</span>
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-800">학번</p>
+                                        <p className="text-xs text-slate-500">{user?.studentId}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between p-4">
+                                <div className="flex items-center gap-3">
+                                    <span className="material-symbols-outlined text-slate-400">person</span>
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-800">역할</p>
+                                        <p className="text-xs text-slate-500">학생</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Password Change */}
+                            <div className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-slate-400">lock</span>
+                                        <div>
+                                            <p className="text-sm font-medium text-slate-800">비밀번호</p>
+                                            <p className="text-xs text-slate-500">로그인 비밀번호를 변경합니다</p>
                                         </div>
-                                        <span className="text-sm font-medium" style={{ color: 'var(--sq-primary)' }}>{pct}%</span>
                                     </div>
-                                    <Progress value={pct} color="primary" size="sm" />
-                                    <div className="grid grid-cols-5 gap-2">
-                                        {course.stages.map((stage) => {
-                                            const sp = progress?.[user?.studentId]?.[course.id]?.[stage.id];
-                                            const difficulties = ['easy', 'normal', 'hard'];
-                                            return (
-                                                <div key={stage.id} className="text-center">
-                                                    <p className="text-xs mb-1" style={{ color: 'var(--sq-muted)' }}>S{stage.order}</p>
-                                                    <div className="flex justify-center gap-0.5">
-                                                        {difficulties.map((d) => (
-                                                            <Star key={d} size={12} className={sp?.[d] ? 'text-amber-400 fill-amber-400' : ''} style={sp?.[d] ? {} : { color: 'var(--sq-border)' }} />
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                    <Button size="sm" variant="flat" color="primary" onPress={() => { setShowPwChange(!showPwChange); setPwMsg(null); setPwForm({ current: '', newPw: '', confirm: '' }); }}>
+                                        {showPwChange ? '취소' : '변경'}
+                                    </Button>
+                                </div>
+                                {showPwChange && (
+                                    <div className="mt-4 space-y-3 pl-9">
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-500 mb-1">현재 비밀번호</label>
+                                            <input
+                                                type="password"
+                                                value={pwForm.current}
+                                                onChange={e => setPwForm({ ...pwForm, current: e.target.value })}
+                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
+                                                placeholder="현재 비밀번호 입력"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-500 mb-1">새 비밀번호</label>
+                                            <input
+                                                type="password"
+                                                value={pwForm.newPw}
+                                                onChange={e => setPwForm({ ...pwForm, newPw: e.target.value })}
+                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
+                                                placeholder="새 비밀번호 입력"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-500 mb-1">새 비밀번호 확인</label>
+                                            <input
+                                                type="password"
+                                                value={pwForm.confirm}
+                                                onChange={e => setPwForm({ ...pwForm, confirm: e.target.value })}
+                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
+                                                placeholder="새 비밀번호 다시 입력"
+                                            />
+                                        </div>
+                                        {pwMsg && (
+                                            <p className={`text-xs font-medium flex items-center gap-1 ${pwMsg.ok ? 'text-green-600' : 'text-red-500'}`}>
+                                                <span className="material-symbols-outlined text-sm">{pwMsg.ok ? 'check_circle' : 'error'}</span>
+                                                {pwMsg.text}
+                                            </p>
+                                        )}
+                                        <Button
+                                            size="sm"
+                                            color="primary"
+                                            className="font-medium"
+                                            isDisabled={!pwForm.current || !pwForm.newPw || !pwForm.confirm}
+                                            onPress={() => {
+                                                if (pwForm.newPw !== pwForm.confirm) {
+                                                    setPwMsg({ ok: false, text: '새 비밀번호가 일치하지 않습니다.' });
+                                                    return;
+                                                }
+                                                if (pwForm.newPw.length < 2) {
+                                                    setPwMsg({ ok: false, text: '비밀번호는 2자 이상이어야 합니다.' });
+                                                    return;
+                                                }
+                                                const ok = changePassword(user?.studentId, pwForm.current, pwForm.newPw);
+                                                if (ok) {
+                                                    setPwMsg({ ok: true, text: '비밀번호가 변경되었습니다.' });
+                                                    setPwForm({ current: '', newPw: '', confirm: '' });
+                                                    setTimeout(() => { setShowPwChange(false); setPwMsg(null); }, 2000);
+                                                } else {
+                                                    setPwMsg({ ok: false, text: '현재 비밀번호가 올바르지 않습니다.' });
+                                                }
+                                            }}
+                                        >
+                                            비밀번호 변경
+                                        </Button>
                                     </div>
-                                </CardBody>
-                            </Card>
-                        );
-                    })}
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Logout Section */}
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-red-400">logout</span>
+                            로그아웃
+                        </h3>
+                        <div className="bg-white rounded-xl border border-red-100 shadow-card p-4">
+                            <p className="text-sm text-slate-500 mb-3">현재 세션에서 로그아웃합니다.</p>
+                            <Button size="sm" color="danger" variant="flat" onPress={handleLogout}>
+                                로그아웃
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </StudentLayout>
     );
 }

@@ -354,28 +354,23 @@ export default function StudentDashboardPage() {
                         <span className="hidden lg:block">My Class</span>
                         <span className="hidden lg:flex ml-auto bg-accent-pink text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-[0_0_10px_rgba(241,91,181,0.5)]">{myClasses.length}</span>
                     </button>
-                    <a className="flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-all group" href="#">
-                        <span className="material-symbols-outlined group-hover:scale-110 transition-transform">emoji_events</span>
-                        <span className="hidden lg:block">Leaderboard</span>
-                    </a>
-                    <a className="flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-all group" href="#">
+                    <button onClick={() => navigate('/marketplace')} className="flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-all group w-full text-left">
                         <span className="material-symbols-outlined group-hover:scale-110 transition-transform">storefront</span>
                         <span className="hidden lg:block">Marketplace</span>
-                    </a>
+                    </button>
                 </nav>
 
                 <div className="p-4 border-t border-accent-purple/20">
-                    <button onClick={() => navigate('/profile')} className="flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-all group w-full text-left">
+                    <button onClick={() => navigate('/settings')} className="flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-all group w-full text-left">
                         <span className="material-symbols-outlined group-hover:rotate-90 transition-transform">settings</span>
                         <span className="hidden lg:block">Settings</span>
                     </button>
-                    <div className="mt-4 flex items-center gap-3 px-2 lg:px-4 cursor-pointer" onClick={handleLogout} title="Click to Logout">
+                    <div className="mt-4 flex items-center gap-3 px-2 lg:px-4 cursor-pointer" onClick={() => navigate('/student-profile')} title="View Profile">
                         <div className="relative size-10 rounded-full bg-cover bg-center ring-2 ring-primary/50" style={{ backgroundImage: "url('https://ui-avatars.com/api/?name=" + (user?.name || 'User') + "&background=random')" }}>
                             <div className="absolute bottom-0 right-0 size-3 bg-secondary border-2 border-white rounded-full"></div>
                         </div>
                         <div className="hidden lg:flex flex-col">
                             <span className="text-sm font-bold text-slate-900">{user?.name || 'Student'}</span>
-                            <span className="text-xs text-slate-500">Level {level} Sorcerer</span>
                         </div>
                     </div>
                 </div>
