@@ -10,7 +10,7 @@ export default function StudentDashboardPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout } = useAuthStore();
-    const { getStudentProgress } = useProgressStore();
+    const { getStudentProgress, totalStars } = useProgressStore();
     const { courses } = useStageStore();
     const activeTab = useMemo(() => {
         const tab = new URLSearchParams(location.search).get('tab');
@@ -25,6 +25,7 @@ export default function StudentDashboardPage() {
     const globalRank = 42;
     const completedCourses = 8;
 
+    const myStars = totalStars[user?.studentId] || 0;
     const progressPercentage = (xp / nextLevelXP) * 100;
     const myClasses = courses;
 
@@ -396,9 +397,9 @@ export default function StudentDashboardPage() {
                             <span className="material-symbols-outlined text-slate-600 group-hover:text-primary">notifications</span>
                             <span className="absolute top-2 right-2 size-2 bg-accent-pink rounded-full animate-pulse"></span>
                         </button>
-                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-accent-yellow/50">
-                            <span className="material-symbols-outlined text-accent-yellow text-[20px] drop-shadow-[0_0_5px_rgba(254,228,64,0.5)]">bolt</span>
-                            <span className="font-bold text-sm">{xp.toLocaleString()} XP</span>
+                        <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-50 border border-amber-200 shadow-sm">
+                            <Star size={16} className="text-amber-500 fill-amber-500" />
+                            <span className="text-base font-bold text-amber-700">{myStars}</span>
                         </div>
                     </div>
                 </header>
@@ -630,7 +631,7 @@ export default function StudentDashboardPage() {
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <h2 className="text-2xl font-bold">My Class</h2>
-                                            <p className="text-slate-500 text-sm mt-1">Select a class to continue your quest.</p>
+                                            <p className="text-slate-500 text-sm mt-1">수업을 선택하여 퀘스트를 이어가세요.</p>
                                         </div>
                                     </div>
 

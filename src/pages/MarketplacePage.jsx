@@ -32,38 +32,36 @@ export default function MarketplacePage() {
     const myPurchases = getStudentPurchases(user?.studentId);
 
     const handlePurchase = (itemId) => {
-        const result = purchaseItem(user?.studentId, itemId, spendStars);
+        const result = purchaseItem(user?.studentId, itemId, spendStars, user?.name);
         setPurchaseMsg(result);
         setTimeout(() => setPurchaseMsg(null), 3000);
     };
 
     return (
         <StudentLayout>
-            <div className="min-h-full bg-background-light font-display">
-                {/* Header */}
-                <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-accent-purple/20">
-                    <div className="max-w-5xl mx-auto flex items-center justify-between px-4 md:px-8 py-4">
-                        <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-primary">storefront</span>
-                            Marketplace
-                        </h1>
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => setShowHistory(!showHistory)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors"
-                            >
-                                <span className="material-symbols-outlined text-sm text-slate-600">receipt_long</span>
-                                <span className="text-sm font-medium text-slate-700">구매내역</span>
-                                {myPurchases.filter(p => p.status === 'pending').length > 0 && (
-                                    <span className="bg-accent-pink text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                                        {myPurchases.filter(p => p.status === 'pending').length}
-                                    </span>
-                                )}
-                            </button>
-                            <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-50 border border-amber-200 shadow-sm">
-                                <Star size={16} className="text-amber-500 fill-amber-500" />
-                                <span className="text-base font-bold text-amber-700">{myStars}</span>
-                            </div>
+            <div className="min-h-full bg-background-light font-display flex flex-col h-screen overflow-hidden">
+                {/* Header - Same style as Dashboard / My Class */}
+                <header className="flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md sticky top-0 z-10 border-b border-accent-pink/20">
+                    <div className="md:hidden flex items-center gap-3">
+                        <button className="p-2 -ml-2 rounded-lg text-slate-500 hover:bg-slate-100">
+                            <span className="material-symbols-outlined">menu</span>
+                        </button>
+                        <span className="font-bold text-lg">Marketplace</span>
+                    </div>
+                    <div className="hidden md:flex flex-1 max-w-xl mx-auto">
+                        <div className="relative w-full group">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors material-symbols-outlined">search</span>
+                            <input className="w-full bg-slate-100 border-none rounded-full py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary placeholder-slate-400 transition-shadow outline-none" placeholder="상품 검색..." type="text" />
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 md:gap-4 ml-auto">
+                        <button className="relative p-2 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors group">
+                            <span className="material-symbols-outlined text-slate-600 group-hover:text-primary">notifications</span>
+                            <span className="absolute top-2 right-2 size-2 bg-accent-pink rounded-full animate-pulse"></span>
+                        </button>
+                        <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-50 border border-amber-200 shadow-sm">
+                            <Star size={16} className="text-amber-500 fill-amber-500" />
+                            <span className="text-base font-bold text-amber-700">{myStars}</span>
                         </div>
                     </div>
                 </header>
@@ -71,8 +69,8 @@ export default function MarketplacePage() {
                 {/* Purchase notification */}
                 {purchaseMsg && (
                     <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl shadow-xl border text-sm font-medium transition-all animate-bounce ${purchaseMsg.success
-                            ? 'bg-green-50 border-green-200 text-green-700'
-                            : 'bg-red-50 border-red-200 text-red-700'
+                        ? 'bg-green-50 border-green-200 text-green-700'
+                        : 'bg-red-50 border-red-200 text-red-700'
                         }`}>
                         <span className="material-symbols-outlined text-sm mr-1 align-text-bottom">
                             {purchaseMsg.success ? 'check_circle' : 'error'}
@@ -81,10 +79,30 @@ export default function MarketplacePage() {
                     </div>
                 )}
 
-                <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
+                <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 pb-20 scroll-smooth">
+                    {/* Page Title - Same style as My Class */}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-2xl font-bold">Marketplace</h2>
+                            <p className="text-slate-500 text-sm mt-1">별을 사용하여 다양한 상품을 구매하세요.</p>
+                        </div>
+                        <button
+                            onClick={() => setShowHistory(!showHistory)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors"
+                        >
+                            <span className="material-symbols-outlined text-sm text-slate-600">receipt_long</span>
+                            <span className="text-sm font-medium text-slate-700">구매내역</span>
+                            {myPurchases.filter(p => p.status === 'pending').length > 0 && (
+                                <span className="bg-accent-pink text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                                    {myPurchases.filter(p => p.status === 'pending').length}
+                                </span>
+                            )}
+                        </button>
+                    </div>
+
                     {/* Purchase History Panel */}
                     {showHistory && (
-                        <div className="mb-8 bg-white rounded-xl border border-accent-purple/20 shadow-card overflow-hidden">
+                        <div className="bg-white rounded-xl border border-accent-purple/20 shadow-card overflow-hidden">
                             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
                                     <span className="material-symbols-outlined text-primary">receipt_long</span>
@@ -115,8 +133,8 @@ export default function MarketplacePage() {
                                                     -{purchase.price}
                                                 </span>
                                                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${purchase.status === 'delivered'
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : 'bg-amber-100 text-amber-700'
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : 'bg-amber-100 text-amber-700'
                                                     }`}>
                                                     {purchase.status === 'delivered' ? '수령 완료' : '준비 중'}
                                                 </span>
@@ -129,14 +147,14 @@ export default function MarketplacePage() {
                     )}
 
                     {/* Category Tabs */}
-                    <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+                    <div className="flex gap-2 overflow-x-auto pb-2">
                         {categories.map(cat => (
                             <button
                                 key={cat.id}
                                 onClick={() => setSelectedCategory(cat.id)}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${selectedCategory === cat.id
-                                        ? 'bg-primary text-white shadow-lg shadow-primary/30'
-                                        : 'bg-white text-slate-600 border border-slate-200 hover:border-primary/30 hover:text-primary'
+                                    ? 'bg-primary text-white shadow-lg shadow-primary/30'
+                                    : 'bg-white text-slate-600 border border-slate-200 hover:border-primary/30 hover:text-primary'
                                     }`}
                             >
                                 <span className="material-symbols-outlined text-base">{cat.icon}</span>

@@ -443,12 +443,16 @@ const LearnersManagement = ({ registeredStudents, onAddStudent, onDeleteStudent,
         e.preventDefault();
         if (!currentStudent) return;
 
-        onUpdateStudent(currentStudent.studentId, {
+        const updates = {
             name: formData.name,
-            password: formData.password, // Optional: handle password update securely
             grade: parseInt(formData.grade),
             admissionYear: parseInt(formData.admissionYear)
-        });
+        };
+        // Only update password if the admin actually typed a new one
+        if (formData.password && formData.password.trim() !== '') {
+            updates.password = formData.password.trim();
+        }
+        onUpdateStudent(currentStudent.studentId, updates);
         setIsEditModalOpen(false);
         setCurrentStudent(null);
         setFormData({ name: '', studentId: '', password: '', grade: '1', admissionYear: new Date().getFullYear() });
@@ -459,7 +463,7 @@ const LearnersManagement = ({ registeredStudents, onAddStudent, onDeleteStudent,
         setFormData({
             name: student.name,
             studentId: student.studentId,
-            password: student.password, // This might be sensitive, consider not pre-filling
+            password: '', // Leave blank - admin types new password only if changing
             grade: student.grade || 1,
             admissionYear: student.admissionYear || new Date().getFullYear()
         });
@@ -711,11 +715,11 @@ const LearnersManagement = ({ registeredStudents, onAddStudent, onDeleteStudent,
                             <div>
                                 <label className="block text-sm font-medium text-gray-400 mb-1">Password</label>
                                 <input
-                                    type="password"
+                                    type="text"
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                     className="w-full bg-background-dark border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-admin-primary transition-colors"
-                                    placeholder={isEditModalOpen ? "(Leave blank to keep unchanged)" : "Leave empty for default '1234'"}
+                                    placeholder={isEditModalOpen ? "비워두면 기존 비밀번호 유지" : "비워두면 기본값 '1234'"}
                                 />
                                 {!isEditModalOpen && <p className="text-xs text-gray-500 mt-1">Default password is '1234' if left empty.</p>}
                             </div>
@@ -1842,9 +1846,11 @@ function MarketplaceManagement() {
     const pendingPurchases = purchases.filter(p => p.status === 'pending');
     const deliveredPurchases = purchases.filter(p => p.status === 'delivered');
 
-    const getStudentName = (studentId) => {
-        const s = registeredStudents.find(st => st.studentId === studentId);
-        return s ? s.name : studentId;
+    const getStudentName = (purchase) => {
+        return purchase.studentName || (() => {
+            const s = registeredStudents.find(st => st.studentId === purchase.studentId);
+            return s ? s.name : purchase.studentId;
+        })();
     };
 
     return (
@@ -1969,7 +1975,7 @@ function MarketplaceManagement() {
                                             <div>
                                                 <p className="text-white text-sm font-medium">{purchase.itemName}</p>
                                                 <p className="text-gray-500 text-xs">
-                                                    {getStudentName(purchase.studentId)} ({purchase.studentId}) · {new Date(purchase.timestamp).toLocaleString('ko-KR')}
+                                                    {getStudentName(purchase)} ({purchase.studentId}) · {new Date(purchase.timestamp).toLocaleString('ko-KR')}
                                                 </p>
                                             </div>
                                         </div>
@@ -2006,7 +2012,7 @@ function MarketplaceManagement() {
                                             <div>
                                                 <p className="text-white text-sm font-medium">{purchase.itemName}</p>
                                                 <p className="text-gray-500 text-xs">
-                                                    {getStudentName(purchase.studentId)} ({purchase.studentId}) · {new Date(purchase.timestamp).toLocaleString('ko-KR')}
+                                                    {getStudentName(purchase)} ({purchase.studentId}) · {new Date(purchase.timestamp).toLocaleString('ko-KR')}
                                                 </p>
                                             </div>
                                         </div>

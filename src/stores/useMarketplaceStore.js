@@ -33,7 +33,7 @@ export const useMarketplaceStore = create(
             },
 
             // Purchase an item (returns { success, message })
-            purchaseItem: (studentId, itemId, spendStars) => {
+            purchaseItem: (studentId, itemId, spendStars, studentName) => {
                 const items = get().shopItems;
                 const item = items.find(i => i.id === itemId);
                 if (!item) return { success: false, message: '아이템을 찾을 수 없습니다.' };
@@ -49,6 +49,7 @@ export const useMarketplaceStore = create(
                     ),
                     purchases: [...state.purchases, {
                         studentId,
+                        studentName: studentName || studentId,
                         itemId: item.id,
                         itemName: item.name,
                         itemIcon: item.icon,
