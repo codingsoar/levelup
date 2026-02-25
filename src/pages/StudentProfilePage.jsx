@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { useProgressStore } from '../stores/useProgressStore';
 import { useStageStore } from '../stores/useStageStore';
 import StudentLayout from '../components/StudentLayout';
+import StudentHeaderActions from '../components/StudentHeaderActions';
 
 export default function StudentProfilePage() {
     const navigate = useNavigate();
@@ -34,6 +35,7 @@ export default function StudentProfilePage() {
                             <span className="material-symbols-outlined text-primary">person</span>
                             프로필
                         </h1>
+                        <StudentHeaderActions />
                     </div>
                 </header>
 

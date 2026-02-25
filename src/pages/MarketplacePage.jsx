@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { useProgressStore } from '../stores/useProgressStore';
 import { useMarketplaceStore } from '../stores/useMarketplaceStore';
 import StudentLayout from '../components/StudentLayout';
+import StudentHeaderActions from '../components/StudentHeaderActions';
 
 const categories = [
     { id: 'all', label: '전체', icon: 'apps' },
@@ -54,12 +55,7 @@ export default function MarketplacePage() {
                             <input className="w-full bg-slate-100 border-none rounded-full py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary placeholder-slate-400 transition-shadow outline-none" placeholder="상품 검색..." type="text" />
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 md:gap-4 ml-auto">
-                        <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-50 border border-amber-200 shadow-sm">
-                            <Star size={16} className="text-amber-500 fill-amber-500" />
-                            <span className="text-base font-bold text-amber-700">{myStars}</span>
-                        </div>
-                    </div>
+                    <StudentHeaderActions />
                 </header>
 
                 {/* Purchase notification */}

@@ -1,34 +1,15 @@
-import { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useStageStore } from '../stores/useStageStore';
-import { useNotificationStore } from '../stores/useNotificationStore';
 
 export default function StudentLayout({ children, activeTab: propActiveTab }) {
     const navigate = useNavigate();
     const location = useLocation();
     const { user } = useAuthStore();
     const { courses } = useStageStore();
-    const { notifications, markAsRead, markAllAsRead, getUnreadCount } = useNotificationStore();
-    const [showNotifs, setShowNotifs] = useState(false);
 
     const assignedCourseIds = user?.courseIds || [];
     const myClasses = courses.filter(c => assignedCourseIds.includes(c.id));
-
-    const myNotifications = useMemo(() => {
-        if (!user?.studentId) return [];
-        return notifications.filter(n => {
-            if (n.to === 'all') return true;
-            if (n.to === user.studentId) return true;
-            if (n.to.startsWith('class:')) {
-                const courseId = n.to.replace('class:', '');
-                return assignedCourseIds.includes(courseId);
-            }
-            return false;
-        });
-    }, [notifications, user?.studentId, assignedCourseIds]);
-
-    const unreadCount = myNotifications.filter(n => !n.readBy.includes(user?.studentId)).length;
 
     // Determine active tab from prop or pathname
     const activeTab = propActiveTab || (() => {
@@ -97,25 +78,14 @@ export default function StudentLayout({ children, activeTab: propActiveTab }) {
                         <span className="material-symbols-outlined group-hover:rotate-90 transition-transform">settings</span>
                         <span className="hidden lg:block">Settings</span>
                     </button>
-                    <div className="mt-4 flex items-center gap-3 px-2 lg:px-4">
-                        <div className="relative size-10 rounded-full bg-cover bg-center ring-2 ring-primary/50 cursor-pointer" style={{ backgroundImage: "url('https://ui-avatars.com/api/?name=" + (user?.name || 'User') + "&background=random')" }} onClick={() => navigate('/student-profile')} title="View Profile">
-                            <div className="absolute bottom-0 right-0 size-3 bg-secondary border-2 border-white rounded-full"></div>
-                        </div>
-                        <div className="hidden lg:flex flex-col flex-1 min-w-0">
-                            <span className="text-sm font-bold text-slate-900 truncate">{user?.name || 'Student'}</span>
-                        </div>
-                        {/* Notification Bell */}
-                        <button
-                            onClick={() => setShowNotifs(!showNotifs)}
-                            className="relative p-2 rounded-xl hover:bg-slate-100 text-slate-500 hover:text-primary transition-colors"
-                            title="알림"
-                        >
-                            <span className="material-symbols-outlined text-xl">notifications</span>
-                            {unreadCount > 0 && (
-                                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-accent-pink text-[9px] text-white font-bold flex items-center justify-center shadow">{unreadCount > 9 ? '9+' : unreadCount}</span>
-                            )}
-                        </button>
-                    </div>
+                    {/* Logout Button */}
+                    <button
+                        onClick={() => navigate('/')}
+                        className={`mt-2 flex items-center gap-4 px-4 py-3 rounded-xl transition-all group w-full text-left text-slate-500 hover:bg-red-50 hover:text-red-600`}
+                    >
+                        <span className="material-symbols-outlined group-hover:rotate-180 transition-transform">logout</span>
+                        <span className="hidden lg:block">Logout</span>
+                    </button>
                 </div>
             </aside>
 
@@ -123,60 +93,6 @@ export default function StudentLayout({ children, activeTab: propActiveTab }) {
             <main className="flex-1 h-screen overflow-y-auto relative">
                 {children}
             </main>
-
-            {/* Notification Popup */}
-            {showNotifs && (
-                <div className="fixed inset-0 z-50" onClick={() => setShowNotifs(false)}>
-                    <div className="absolute bottom-4 left-4 md:left-24 lg:left-64 w-96 max-h-[70vh] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-                        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-                            <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-primary">notifications</span>
-                                알림 {unreadCount > 0 && <span className="text-xs bg-accent-pink text-white px-1.5 py-0.5 rounded-full">{unreadCount}</span>}
-                            </h3>
-                            <div className="flex items-center gap-2">
-                                {unreadCount > 0 && (
-                                    <button onClick={() => markAllAsRead(user?.studentId)} className="text-xs text-primary hover:underline">모두 읽음</button>
-                                )}
-                                <button onClick={() => setShowNotifs(false)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400">
-                                    <span className="material-symbols-outlined text-sm">close</span>
-                                </button>
-                            </div>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                            {myNotifications.length === 0 && (
-                                <div className="text-center text-slate-400 py-8 text-sm">알림이 없습니다.</div>
-                            )}
-                            {myNotifications.map(n => {
-                                const isUnread = !n.readBy.includes(user?.studentId);
-                                return (
-                                    <div
-                                        key={n.id}
-                                        onClick={() => { if (isUnread) markAsRead(n.id, user?.studentId); }}
-                                        className={`p-3 rounded-xl border cursor-pointer transition-all ${isUnread
-                                            ? 'bg-primary/5 border-primary/20 hover:bg-primary/10'
-                                            : 'bg-slate-50 border-slate-100 hover:bg-slate-100'
-                                            }`}
-                                    >
-                                        <div className="flex items-start gap-2">
-                                            {isUnread && <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0"></div>}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-1.5 mb-0.5">
-                                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-600 font-medium">
-                                                        {n.to === 'all' ? '전체' : n.to.startsWith('class:') ? `📚 ${n.courseName || '수업'}` : '📬 개인'}
-                                                    </span>
-                                                </div>
-                                                <p className="text-sm font-semibold text-slate-900 truncate">{n.title}</p>
-                                                <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
-                                                <p className="text-[10px] text-slate-400 mt-1">{new Date(n.timestamp).toLocaleString('ko-KR')}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

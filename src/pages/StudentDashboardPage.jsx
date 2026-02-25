@@ -5,6 +5,7 @@ import { useProgressStore } from '../stores/useProgressStore';
 import { useStageStore } from '../stores/useStageStore';
 import { Button, Card, CardBody, Progress, Modal, ModalContent, ModalBody } from '@heroui/react';
 import { ChevronLeft, Star, Upload, ChevronRight, Check, Play, BookOpen } from 'lucide-react';
+import StudentHeaderActions from '../components/StudentHeaderActions';
 
 export default function StudentDashboardPage() {
     const navigate = useNavigate();
@@ -403,12 +404,7 @@ export default function StudentDashboardPage() {
                             <input className="w-full bg-slate-100 border-none rounded-full py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary placeholder-slate-400 transition-shadow outline-none" placeholder="Search for courses, quests, or friends..." type="text" />
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 md:gap-4 ml-auto">
-                        <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-50 border border-amber-200 shadow-sm">
-                            <Star size={16} className="text-amber-500 fill-amber-500" />
-                            <span className="text-base font-bold text-amber-700">{myStars}</span>
-                        </div>
-                    </div>
+                    <StudentHeaderActions />
                 </header>
 
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 pb-20 scroll-smooth">
