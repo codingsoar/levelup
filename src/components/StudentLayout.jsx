@@ -9,7 +9,7 @@ export default function StudentLayout({ children, activeTab: propActiveTab }) {
     const location = useLocation();
     const { user } = useAuthStore();
     const { courses } = useStageStore();
-    const { notifications, markAsRead, markAllAsRead, showPanel, closePanel, togglePanel } = useNotificationStore();
+    const { notifications, markAsRead, markAllAsRead, showPanel, closePanel } = useNotificationStore();
 
     const assignedCourseIds = user?.courseIds || [];
     const myClasses = courses.filter(c => assignedCourseIds.includes(c.id));
@@ -109,17 +109,6 @@ export default function StudentLayout({ children, activeTab: propActiveTab }) {
 
             {/* Main Content */}
             <main className="flex-1 h-screen overflow-y-auto relative">
-                {/* Floating Notification Bell - visible on all pages */}
-                <button
-                    onClick={togglePanel}
-                    className="fixed top-4 right-4 z-40 p-2.5 rounded-full bg-white shadow-lg border border-slate-200 hover:bg-slate-50 hover:shadow-xl transition-all group"
-                    title="알림"
-                >
-                    <span className="material-symbols-outlined text-slate-600 group-hover:text-primary text-xl">notifications</span>
-                    {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-accent-pink text-[10px] text-white font-bold flex items-center justify-center shadow-md border-2 border-white">{unreadCount > 9 ? '9+' : unreadCount}</span>
-                    )}
-                </button>
                 {children}
             </main>
 

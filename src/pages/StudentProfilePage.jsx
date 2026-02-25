@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star, BookOpen } from 'lucide-react';
+import { Star, BookOpen, Shield, Target, Trophy, ChevronRight, Zap, Target as TargetIcon } from 'lucide-react';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useProgressStore } from '../stores/useProgressStore';
+import { useNotificationStore } from '../stores/useNotificationStore';
 import { useStageStore } from '../stores/useStageStore';
 import StudentLayout from '../components/StudentLayout';
 
@@ -10,10 +11,21 @@ export default function StudentProfilePage() {
     const navigate = useNavigate();
     const { user, registeredStudents } = useAuthStore();
     const { courses } = useStageStore();
-    const { progress, totalStars } = useProgressStore();
+    const { totalStars, getStudentProgress } = useProgressStore();
+    const { togglePanel, notifications } = useNotificationStore();
 
     const studentStars = totalStars[user?.studentId] || 0;
+    const progress = getStudentProgress(user?.studentId);
     const visibleCourses = courses;
+
+    const hasUnread = useMemo(() => {
+        const sid = user?.studentId;
+        const cIds = user?.courseIds || [];
+        return notifications.some(n => {
+            const visible = n.to === 'all' || n.to === sid || (n.to.startsWith('class:') && cIds.includes(n.to.replace('class:', '')));
+            return visible && !n.readBy.includes(sid);
+        });
+    }, [notifications, user?.studentId, user?.courseIds]);
 
     // Rank from leaderboard
     const myRank = useMemo(() => {
@@ -34,6 +46,14 @@ export default function StudentProfilePage() {
                             <span className="material-symbols-outlined text-primary">person</span>
                             프로필
                         </h1>
+                        <div className="flex items-center gap-3 md:gap-4 ml-auto">
+                            <button onClick={togglePanel} className="relative p-2 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors group">
+                                <span className="material-symbols-outlined text-slate-600 group-hover:text-primary">notifications</span>
+                                {hasUnread && (
+                                    <span className="absolute top-1 right-1 size-2.5 bg-accent-pink rounded-full animate-pulse"></span>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </header>
 
@@ -135,7 +155,7 @@ export default function StudentProfilePage() {
                                     </div>
 
                                     <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden mb-4">
-                                        <div className="h-full bg-primary rounded-full transition-all duration-500 shadow-[0_0_8px_#00bbf9]" style={{ width: `${pct}%` }} />
+                                        <div className="h-full bg-primary rounded-full transition-all duration-500 shadow-[0_0_8px_#00bbf9]" style={{ width: `${pct}% ` }} />
                                     </div>
 
                                     <div className="grid grid-cols-5 md:grid-cols-8 gap-3">
@@ -144,7 +164,7 @@ export default function StudentProfilePage() {
                                             const difficulties = ['easy', 'normal', 'hard'];
                                             const allDone = sp?.easy && sp?.normal && sp?.hard;
                                             return (
-                                                <div key={stage.id} className={`text-center p-2 rounded-lg border transition-colors ${allDone ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-100'}`}>
+                                                <div key={stage.id} className={`text - center p - 2 rounded - lg border transition - colors ${allDone ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-100'} `}>
                                                     <p className="text-[10px] font-bold text-slate-500 mb-1">S{idx + 1}</p>
                                                     <div className="flex justify-center gap-0.5">
                                                         {difficulties.map((d) => (

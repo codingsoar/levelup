@@ -415,6 +415,12 @@ export default function StudentDashboardPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-3 md:gap-4 ml-auto">
+                        <button onClick={togglePanel} className="relative p-2 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors group">
+                            <span className="material-symbols-outlined text-slate-600 group-hover:text-primary">notifications</span>
+                            {hasUnread && (
+                                <span className="absolute top-1 right-1 size-2.5 bg-accent-pink rounded-full animate-pulse"></span>
+                            )}
+                        </button>
                         <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-50 border border-amber-200 shadow-sm">
                             <Star size={16} className="text-amber-500 fill-amber-500" />
                             <span className="text-base font-bold text-amber-700">{myStars}</span>
