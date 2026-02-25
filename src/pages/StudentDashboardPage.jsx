@@ -13,12 +13,22 @@ export default function StudentDashboardPage() {
     const { user, logout, registeredStudents } = useAuthStore();
     const { getStudentProgress, totalStars } = useProgressStore();
     const { courses } = useStageStore();
+    const { togglePanel, notifications } = useNotificationStore();
     const activeTab = useMemo(() => {
         const tab = new URLSearchParams(location.search).get('tab');
         return tab === 'myClass' ? 'myClass' : 'dashboard';
     }, [location.search]);
 
     const myStars = totalStars[user?.studentId] || 0;
+
+    const hasUnread = useMemo(() => {
+        const sid = user?.studentId;
+        const cIds = user?.courseIds || [];
+        return notifications.some(n => {
+            const visible = n.to === 'all' || n.to === sid || (n.to.startsWith('class:') && cIds.includes(n.to.replace('class:', '')));
+            return visible && !n.readBy.includes(sid);
+        });
+    }, [notifications, user?.studentId, user?.courseIds]);
 
     // Star leaderboard from all registered students
     const starLeaderboard = useMemo(() => {
@@ -405,16 +415,11 @@ export default function StudentDashboardPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-3 md:gap-4 ml-auto">
-                        <button onClick={() => useNotificationStore.getState().togglePanel()} className="relative p-2 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors group">
+                        <button onClick={togglePanel} className="relative p-2 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors group">
                             <span className="material-symbols-outlined text-slate-600 group-hover:text-primary">notifications</span>
-                            {useNotificationStore.getState().notifications.filter(n => {
-                                const sid = user?.studentId;
-                                const cIds = user?.courseIds || [];
-                                const visible = n.to === 'all' || n.to === sid || (n.to.startsWith('class:') && cIds.includes(n.to.replace('class:', '')));
-                                return visible && !n.readBy.includes(sid);
-                            }).length > 0 && (
-                                    <span className="absolute top-1 right-1 size-2.5 bg-accent-pink rounded-full animate-pulse"></span>
-                                )}
+                            {hasUnread && (
+                                <span className="absolute top-1 right-1 size-2.5 bg-accent-pink rounded-full animate-pulse"></span>
+                            )}
                         </button>
                         <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-50 border border-amber-200 shadow-sm">
                             <Star size={16} className="text-amber-500 fill-amber-500" />
