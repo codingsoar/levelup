@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Star, BookOpen } from 'lucide-react';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -7,13 +8,21 @@ import StudentLayout from '../components/StudentLayout';
 
 export default function StudentProfilePage() {
     const navigate = useNavigate();
-    const { user } = useAuthStore();
+    const { user, registeredStudents } = useAuthStore();
     const { courses } = useStageStore();
     const { progress, totalStars } = useProgressStore();
 
     const studentStars = totalStars[user?.studentId] || 0;
-    const assignedCourseIds = user?.courseIds || [];
-    const visibleCourses = courses.filter((course) => assignedCourseIds.includes(course.id));
+    const visibleCourses = courses;
+
+    // Rank from leaderboard
+    const myRank = useMemo(() => {
+        const sorted = registeredStudents
+            .map(s => ({ studentId: s.studentId, stars: totalStars[s.studentId] || 0 }))
+            .sort((a, b) => b.stars - a.stars);
+        const idx = sorted.findIndex(s => s.studentId === user?.studentId);
+        return idx >= 0 ? idx + 1 : '-';
+    }, [registeredStudents, totalStars, user?.studentId]);
 
     return (
         <StudentLayout>
@@ -46,8 +55,8 @@ export default function StudentProfilePage() {
                                     <span className="text-sm font-bold text-amber-700">{studentStars}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/5 border border-primary/20">
-                                    <BookOpen size={14} className="text-primary" />
-                                    <span className="text-sm font-bold text-primary">{visibleCourses.length} 과목</span>
+                                    <span className="material-symbols-outlined text-primary text-sm">leaderboard</span>
+                                    <span className="text-sm font-bold text-primary">#{myRank}</span>
                                 </div>
                             </div>
                         </div>
@@ -63,10 +72,10 @@ export default function StudentProfilePage() {
                             </div>
                         </div>
                         <div className="bg-white p-4 rounded-xl border border-accent-yellow/20 hover:border-accent-yellow/50 transition-colors shadow-card">
-                            <span className="text-xs uppercase tracking-wide text-slate-500">등록 과목</span>
+                            <span className="text-xs uppercase tracking-wide text-slate-500">내 순위</span>
                             <div className="flex items-center gap-2 mt-1">
-                                <span className="material-symbols-outlined text-primary">menu_book</span>
-                                <span className="text-xl font-bold text-slate-800">{visibleCourses.length}</span>
+                                <span className="material-symbols-outlined text-secondary">leaderboard</span>
+                                <span className="text-xl font-bold text-slate-800">#{myRank}</span>
                             </div>
                         </div>
                         <div className="bg-white p-4 rounded-xl border border-primary/20 hover:border-primary/50 transition-colors shadow-card">
