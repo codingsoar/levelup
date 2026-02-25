@@ -4,11 +4,9 @@ import { persist } from 'zustand/middleware';
 export const useNotificationStore = create(
     persist(
         (set, get) => ({
+            // Array of notification objects:
+            // { id, from, to (studentId | 'all' | 'class:courseId'), title, message, timestamp, readBy: [] }
             notifications: [],
-            showPanel: false,
-
-            togglePanel: () => set(state => ({ showPanel: !state.showPanel })),
-            closePanel: () => set({ showPanel: false }),
 
             // Send a notification from admin
             sendNotification: ({ to, title, message, courseName }) => {
@@ -76,6 +74,6 @@ export const useNotificationStore = create(
                 }).length;
             },
         }),
-        { name: 'starquest-notifications', partialize: (state) => ({ notifications: state.notifications }) }
+        { name: 'starquest-notifications' }
     )
 );

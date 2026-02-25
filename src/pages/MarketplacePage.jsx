@@ -1,11 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@heroui/react';
 import { Star } from 'lucide-react';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useProgressStore } from '../stores/useProgressStore';
 import { useMarketplaceStore } from '../stores/useMarketplaceStore';
-import { useNotificationStore } from '../stores/useNotificationStore';
 import StudentLayout from '../components/StudentLayout';
 
 const categories = [
@@ -21,16 +20,15 @@ export default function MarketplacePage() {
     const { user } = useAuthStore();
     const { totalStars, spendStars } = useProgressStore();
     const { shopItems, purchaseItem, getStudentPurchases } = useMarketplaceStore();
-    const { togglePanel, notifications } = useNotificationStore();
 
-    const [activeCategory, setActiveCategory] = useState('all');
+    const [selectedCategory, setSelectedCategory] = useState('all');
     const [purchaseMsg, setPurchaseMsg] = useState(null);
     const [showHistory, setShowHistory] = useState(false);
 
     const myStars = totalStars[user?.studentId] || 0;
-    const filteredItems = activeCategory === 'all'
+    const filteredItems = selectedCategory === 'all'
         ? shopItems
-        : shopItems.filter(item => item.category === activeCategory);
+        : shopItems.filter(item => item.category === selectedCategory);
     const myPurchases = getStudentPurchases(user?.studentId);
 
     const handlePurchase = (itemId) => {
@@ -57,12 +55,6 @@ export default function MarketplacePage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-3 md:gap-4 ml-auto">
-                        <button onClick={togglePanel} className="relative p-2 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors group">
-                            <span className="material-symbols-outlined text-slate-600 group-hover:text-primary">notifications</span>
-                            {hasUnread && (
-                                <span className="absolute top-1 right-1 size-2.5 bg-accent-pink rounded-full animate-pulse"></span>
-                            )}
-                        </button>
                         <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-50 border border-amber-200 shadow-sm">
                             <Star size={16} className="text-amber-500 fill-amber-500" />
                             <span className="text-base font-bold text-amber-700">{myStars}</span>
@@ -72,10 +64,10 @@ export default function MarketplacePage() {
 
                 {/* Purchase notification */}
                 {purchaseMsg && (
-                    <div className={`fixed top - 20 left - 1 / 2 - translate - x - 1 / 2 z - 50 px - 6 py - 3 rounded - xl shadow - xl border text - sm font - medium transition - all animate - bounce ${purchaseMsg.success
-                            ? 'bg-green-50 border-green-200 text-green-700'
-                            : 'bg-red-50 border-red-200 text-red-700'
-                        } `}>
+                    <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl shadow-xl border text-sm font-medium transition-all animate-bounce ${purchaseMsg.success
+                        ? 'bg-green-50 border-green-200 text-green-700'
+                        : 'bg-red-50 border-red-200 text-red-700'
+                        }`}>
                         <span className="material-symbols-outlined text-sm mr-1 align-text-bottom">
                             {purchaseMsg.success ? 'check_circle' : 'error'}
                         </span>
@@ -136,10 +128,10 @@ export default function MarketplacePage() {
                                                     <Star size={12} className="fill-amber-500 text-amber-500" />
                                                     -{purchase.price}
                                                 </span>
-                                                <span className={`text - xs font - bold px - 2 py - 0.5 rounded - full ${purchase.status === 'delivered'
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : 'bg-amber-100 text-amber-700'
-                                                    } `}>
+                                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${purchase.status === 'delivered'
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : 'bg-amber-100 text-amber-700'
+                                                    }`}>
                                                     {purchase.status === 'delivered' ? '수령 완료' : '준비 중'}
                                                 </span>
                                             </div>
@@ -156,10 +148,10 @@ export default function MarketplacePage() {
                             <button
                                 key={cat.id}
                                 onClick={() => setSelectedCategory(cat.id)}
-                                className={`flex items - center gap - 2 px - 4 py - 2 rounded - full text - sm font - medium whitespace - nowrap transition - all ${selectedCategory === cat.id
-                                        ? 'bg-primary text-white shadow-lg shadow-primary/30'
-                                        : 'bg-white text-slate-600 border border-slate-200 hover:border-primary/30 hover:text-primary'
-                                    } `}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${selectedCategory === cat.id
+                                    ? 'bg-primary text-white shadow-lg shadow-primary/30'
+                                    : 'bg-white text-slate-600 border border-slate-200 hover:border-primary/30 hover:text-primary'
+                                    }`}
                             >
                                 <span className="material-symbols-outlined text-base">{cat.icon}</span>
                                 {cat.label}
@@ -175,8 +167,8 @@ export default function MarketplacePage() {
                             return (
                                 <div
                                     key={item.id}
-                                    className={`bg - white rounded - xl border overflow - hidden shadow - card hover: shadow - lg transition - all group ${outOfStock ? 'opacity-50 border-slate-200' : 'border-accent-purple/20 hover:border-primary/40'
-                                        } `}
+                                    className={`bg-white rounded-xl border overflow-hidden shadow-card hover:shadow-lg transition-all group ${outOfStock ? 'opacity-50 border-slate-200' : 'border-accent-purple/20 hover:border-primary/40'
+                                        }`}
                                 >
                                     {/* Item Icon Area */}
                                     <div className="relative h-32 flex items-center justify-center bg-gradient-to-br from-slate-50 to-accent-purple/5 group-hover:from-primary/5 group-hover:to-secondary/5 transition-colors">

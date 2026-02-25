@@ -9,7 +9,8 @@ export default function StudentLayout({ children, activeTab: propActiveTab }) {
     const location = useLocation();
     const { user } = useAuthStore();
     const { courses } = useStageStore();
-    const { notifications, markAsRead, markAllAsRead, showPanel, closePanel } = useNotificationStore();
+    const { notifications, markAsRead, markAllAsRead, getUnreadCount } = useNotificationStore();
+    const [showNotifs, setShowNotifs] = useState(false);
 
     const assignedCourseIds = user?.courseIds || [];
     const myClasses = courses.filter(c => assignedCourseIds.includes(c.id));
@@ -96,13 +97,24 @@ export default function StudentLayout({ children, activeTab: propActiveTab }) {
                         <span className="material-symbols-outlined group-hover:rotate-90 transition-transform">settings</span>
                         <span className="hidden lg:block">Settings</span>
                     </button>
-                    <div className="mt-4 flex items-center gap-3 px-2 lg:px-4 cursor-pointer" onClick={() => navigate('/student-profile')} title="View Profile">
-                        <div className="relative size-10 rounded-full bg-cover bg-center ring-2 ring-primary/50" style={{ backgroundImage: "url('https://ui-avatars.com/api/?name=" + (user?.name || 'User') + "&background=random')" }}>
+                    <div className="mt-4 flex items-center gap-3 px-2 lg:px-4">
+                        <div className="relative size-10 rounded-full bg-cover bg-center ring-2 ring-primary/50 cursor-pointer" style={{ backgroundImage: "url('https://ui-avatars.com/api/?name=" + (user?.name || 'User') + "&background=random')" }} onClick={() => navigate('/student-profile')} title="View Profile">
                             <div className="absolute bottom-0 right-0 size-3 bg-secondary border-2 border-white rounded-full"></div>
                         </div>
-                        <div className="hidden lg:flex flex-col">
-                            <span className="text-sm font-bold text-slate-900">{user?.name || 'Student'}</span>
+                        <div className="hidden lg:flex flex-col flex-1 min-w-0">
+                            <span className="text-sm font-bold text-slate-900 truncate">{user?.name || 'Student'}</span>
                         </div>
+                        {/* Notification Bell */}
+                        <button
+                            onClick={() => setShowNotifs(!showNotifs)}
+                            className="relative p-2 rounded-xl hover:bg-slate-100 text-slate-500 hover:text-primary transition-colors"
+                            title="알림"
+                        >
+                            <span className="material-symbols-outlined text-xl">notifications</span>
+                            {unreadCount > 0 && (
+                                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-accent-pink text-[9px] text-white font-bold flex items-center justify-center shadow">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                            )}
+                        </button>
                     </div>
                 </div>
             </aside>
@@ -113,9 +125,9 @@ export default function StudentLayout({ children, activeTab: propActiveTab }) {
             </main>
 
             {/* Notification Popup */}
-            {showPanel && (
-                <div className="fixed inset-0 z-50" onClick={() => closePanel()}>
-                    <div className="absolute top-16 right-4 w-96 max-h-[70vh] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            {showNotifs && (
+                <div className="fixed inset-0 z-50" onClick={() => setShowNotifs(false)}>
+                    <div className="absolute bottom-4 left-4 md:left-24 lg:left-64 w-96 max-h-[70vh] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
                         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                             <h3 className="font-bold text-slate-900 flex items-center gap-2">
                                 <span className="material-symbols-outlined text-primary">notifications</span>
@@ -125,7 +137,7 @@ export default function StudentLayout({ children, activeTab: propActiveTab }) {
                                 {unreadCount > 0 && (
                                     <button onClick={() => markAllAsRead(user?.studentId)} className="text-xs text-primary hover:underline">모두 읽음</button>
                                 )}
-                                <button onClick={() => closePanel()} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400">
+                                <button onClick={() => setShowNotifs(false)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400">
                                     <span className="material-symbols-outlined text-sm">close</span>
                                 </button>
                             </div>

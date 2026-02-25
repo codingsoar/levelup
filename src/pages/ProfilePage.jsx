@@ -1,26 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@heroui/react';
 import { useAuthStore } from '../stores/useAuthStore';
-import { useNotificationStore } from '../stores/useNotificationStore';
 import StudentLayout from '../components/StudentLayout';
 
 export default function ProfilePage() {
     const navigate = useNavigate();
     const { user, logout, changePassword } = useAuthStore();
-    const { togglePanel, notifications } = useNotificationStore();
     const [showPwChange, setShowPwChange] = useState(false);
     const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
     const [pwMsg, setPwMsg] = useState(null);
-
-    const hasUnread = useMemo(() => {
-        const sid = user?.studentId;
-        const cIds = user?.courseIds || [];
-        return notifications.some(n => {
-            const visible = n.to === 'all' || n.to === sid || (n.to.startsWith('class:') && cIds.includes(n.to.replace('class:', '')));
-            return visible && !n.readBy.includes(sid);
-        });
-    }, [notifications, user?.studentId, user?.courseIds]);
 
     const handleLogout = () => {
         logout();
@@ -37,14 +26,6 @@ export default function ProfilePage() {
                             <span className="material-symbols-outlined text-slate-600">settings</span>
                             설정
                         </h1>
-                        <div className="flex items-center gap-3 md:gap-4 ml-auto">
-                            <button onClick={togglePanel} className="relative p-2 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors group">
-                                <span className="material-symbols-outlined text-slate-600 group-hover:text-primary">notifications</span>
-                                {hasUnread && (
-                                    <span className="absolute top-1 right-1 size-2.5 bg-accent-pink rounded-full animate-pulse"></span>
-                                )}
-                            </button>
-                        </div>
                     </div>
                 </header>
 
