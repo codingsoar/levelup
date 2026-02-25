@@ -1825,15 +1825,23 @@ function MarketplaceManagement() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [activeSubTab, setActiveSubTab] = useState('items');
-    const [newItem, setNewItem] = useState({ name: '', description: '', price: 5, icon: '🎁', category: 'food', stock: 99 });
+    const [newItem, setNewItem] = useState({ name: '', description: '', price: 5, icon: '🎁', category: 'snack', stock: 99 });
+    const [iconPickerFor, setIconPickerFor] = useState(null); // 'add' | 'edit' | null
 
-    const categoryLabels = { food: '간식', privilege: '특권', reward: '보상', item: '문구' };
-    const categoryIcons = { food: '🍪', privilege: '🏆', reward: '⭐', item: '✏️' };
+    const categoryLabels = { snack: '간식/음료', school: '학교생활', stationery: '학용품', special: '특별보상' };
+    const categoryIcons = { snack: '🍪', school: '🏫', stationery: '✏️', special: '🏆' };
+
+    const iconGroups = [
+        { label: '간식/음료', emojis: ['🍪', '🧃', '🍦', '🍫', '🍬', '🍩', '🍰', '☕', '🥤', '🧁', '🍿', '🍭'] },
+        { label: '학교생활', emojis: ['💺', '😴', '📝', '🧹', '🎒', '🏃', '🎵', '📅', '🕐', '🎮', '📱', '🎯'] },
+        { label: '학용품', emojis: ['🖊️', '📓', '🎀', '📐', '✂️', '📎', '🖍️', '📏', '🗂️', '💼', '🎨', '📦'] },
+        { label: '특별보상', emojis: ['⭐', '🏅', '🎖️', '👑', '💎', '🏆', '🎉', '🌟', '✨', '🎁', '🎊', '💫'] },
+    ];
 
     const handleAddItem = () => {
         if (!newItem.name.trim()) return;
         addShopItem(newItem);
-        setNewItem({ name: '', description: '', price: 5, icon: '🎁', category: 'food', stock: 99 });
+        setNewItem({ name: '', description: '', price: 5, icon: '🎁', category: 'snack', stock: 99 });
         setShowAddModal(false);
     };
 
@@ -2037,11 +2045,13 @@ function MarketplaceManagement() {
                             <div className="flex gap-3">
                                 <div className="w-20">
                                     <label className="block text-xs text-gray-500 mb-1">아이콘</label>
-                                    <input
-                                        value={newItem.icon}
-                                        onChange={e => setNewItem({ ...newItem, icon: e.target.value })}
-                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-center text-xl focus:outline-none focus:ring-1 focus:ring-admin-secondary"
-                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setIconPickerFor(iconPickerFor === 'add' ? null : 'add')}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-center text-2xl hover:bg-white/10 focus:outline-none focus:ring-1 focus:ring-admin-secondary transition-colors"
+                                    >
+                                        {newItem.icon}
+                                    </button>
                                 </div>
                                 <div className="flex-1">
                                     <label className="block text-xs text-gray-500 mb-1">상품명</label>
@@ -2062,6 +2072,28 @@ function MarketplaceManagement() {
                                     placeholder="상품 설명"
                                 />
                             </div>
+                            {/* Icon Picker Grid */}
+                            {iconPickerFor === 'add' && (
+                                <div className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2 max-h-48 overflow-y-auto">
+                                    {iconGroups.map(group => (
+                                        <div key={group.label}>
+                                            <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">{group.label}</p>
+                                            <div className="flex flex-wrap gap-1">
+                                                {group.emojis.map(emoji => (
+                                                    <button
+                                                        key={emoji}
+                                                        type="button"
+                                                        onClick={() => { setNewItem({ ...newItem, icon: emoji }); setIconPickerFor(null); }}
+                                                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-admin-secondary/30 transition-colors ${newItem.icon === emoji ? 'bg-admin-secondary/40 ring-1 ring-admin-secondary' : 'bg-white/5'}`}
+                                                    >
+                                                        {emoji}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             <div className="flex gap-3">
                                 <div className="flex-1">
                                     <label className="block text-xs text-gray-500 mb-1">카테고리</label>
@@ -2070,10 +2102,10 @@ function MarketplaceManagement() {
                                         onChange={e => setNewItem({ ...newItem, category: e.target.value })}
                                         className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
                                     >
-                                        <option value="food">🍪 간식</option>
-                                        <option value="privilege">🏆 특권</option>
-                                        <option value="reward">⭐ 보상</option>
-                                        <option value="item">✏️ 문구</option>
+                                        <option value="snack">🍪 간식/음료</option>
+                                        <option value="school">🏫 학교생활</option>
+                                        <option value="stationery">✏️ 학용품</option>
+                                        <option value="special">🏆 특별보상</option>
                                     </select>
                                 </div>
                                 <div className="w-24">
@@ -2122,11 +2154,13 @@ function MarketplaceManagement() {
                             <div className="flex gap-3">
                                 <div className="w-20">
                                     <label className="block text-xs text-gray-500 mb-1">아이콘</label>
-                                    <input
-                                        value={editingItem.icon}
-                                        onChange={e => setEditingItem({ ...editingItem, icon: e.target.value })}
-                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-center text-xl focus:outline-none focus:ring-1 focus:ring-admin-secondary"
-                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setIconPickerFor(iconPickerFor === 'edit' ? null : 'edit')}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-center text-2xl hover:bg-white/10 focus:outline-none focus:ring-1 focus:ring-admin-secondary transition-colors"
+                                    >
+                                        {editingItem.icon}
+                                    </button>
                                 </div>
                                 <div className="flex-1">
                                     <label className="block text-xs text-gray-500 mb-1">상품명</label>
@@ -2145,6 +2179,28 @@ function MarketplaceManagement() {
                                     className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
                                 />
                             </div>
+                            {/* Icon Picker Grid */}
+                            {iconPickerFor === 'edit' && (
+                                <div className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2 max-h-48 overflow-y-auto">
+                                    {iconGroups.map(group => (
+                                        <div key={group.label}>
+                                            <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">{group.label}</p>
+                                            <div className="flex flex-wrap gap-1">
+                                                {group.emojis.map(emoji => (
+                                                    <button
+                                                        key={emoji}
+                                                        type="button"
+                                                        onClick={() => { setEditingItem({ ...editingItem, icon: emoji }); setIconPickerFor(null); }}
+                                                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-admin-secondary/30 transition-colors ${editingItem.icon === emoji ? 'bg-admin-secondary/40 ring-1 ring-admin-secondary' : 'bg-white/5'}`}
+                                                    >
+                                                        {emoji}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             <div className="flex gap-3">
                                 <div className="flex-1">
                                     <label className="block text-xs text-gray-500 mb-1">카테고리</label>
@@ -2153,10 +2209,10 @@ function MarketplaceManagement() {
                                         onChange={e => setEditingItem({ ...editingItem, category: e.target.value })}
                                         className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
                                     >
-                                        <option value="food">🍪 간식</option>
-                                        <option value="privilege">🏆 특권</option>
-                                        <option value="reward">⭐ 보상</option>
-                                        <option value="item">✏️ 문구</option>
+                                        <option value="snack">🍪 간식/음료</option>
+                                        <option value="school">🏫 학교생활</option>
+                                        <option value="stationery">✏️ 학용품</option>
+                                        <option value="special">🏆 특별보상</option>
                                     </select>
                                 </div>
                                 <div className="w-24">

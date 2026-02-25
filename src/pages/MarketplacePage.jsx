@@ -9,10 +9,10 @@ import StudentLayout from '../components/StudentLayout';
 
 const categories = [
     { id: 'all', label: '전체', icon: 'apps' },
-    { id: 'food', label: '간식', icon: 'restaurant' },
-    { id: 'privilege', label: '특권', icon: 'workspace_premium' },
-    { id: 'reward', label: '보상', icon: 'military_tech' },
-    { id: 'item', label: '문구', icon: 'edit' },
+    { id: 'snack', label: '간식/음료', icon: 'restaurant' },
+    { id: 'school', label: '학교생활', icon: 'school' },
+    { id: 'stationery', label: '학용품', icon: 'edit' },
+    { id: 'special', label: '특별보상', icon: 'workspace_premium' },
 ];
 
 export default function MarketplacePage() {
