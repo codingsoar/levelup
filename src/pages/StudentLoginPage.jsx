@@ -174,18 +174,6 @@ export default function StudentLoginPage() {
 
 
                         </form>
-
-                        {/* Footer Links */}
-                        <div className="text-center mt-2">
-                            <p className="text-slate-500 dark:text-slate-400 text-sm">
-                                <button
-                                    onClick={() => navigate('/admin-login')}
-                                    className="text-accent-pink hover:text-accent-pink/80 font-bold ml-1 transition-colors"
-                                >
-                                    Admin Login
-                                </button>
-                            </p>
-                        </div>
                     </div>
 
                     {/* Bottom decorative accent */}

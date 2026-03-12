@@ -446,3 +446,88 @@ Copy this block for every new entry:
 
 ### Notes
 - Commit and push details will match the final synced workspace state for this task.
+
+---
+
+## 2026-03-13 - Sub-Admin Full Admin Access
+
+### Request
+- Allow sub-admin accounts created from the sub-admin tab to use the admin dashboard and the same major admin areas as the main admin.
+
+### Scope
+- `src/pages/AdminPage.jsx` admin UI access and sub-admin account management flow.
+- No auth route changes were needed because `/admin` already allowed `subadmin`.
+
+### Implemented
+- Added a working `SubAdminManagement` view to create, edit, and delete sub-admin accounts.
+- Changed the admin sidebar so `subadmin` users can access `Dashboard`, `Learners`, `Class`, `Assessments`, `Marketplace`, `Sub-Admin`, and `Settings`.
+- Changed admin page initial view to `dashboard` for sub-admin logins as well.
+- Assigned all current course IDs when creating or updating a sub-admin account for compatibility with existing stored course metadata.
+
+### Validation
+- `npm run build` -> Sandbox failed (`spawn EPERM`), escalated success
+- Production build -> Success
+
+### Files
+- `src/pages/AdminPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- `AdminPage.jsx` contains existing mixed text encoding in older strings; new logic was added without broad text normalization to avoid unrelated churn.
+
+---
+
+## 2026-03-13 - Login Page Cross-Link Removal
+
+### Request
+- Remove the link from the student login page to the admin login page.
+- Remove the link from the admin login page to the student login page.
+
+### Scope
+- Login page UI only.
+- Direct route access to `/` and `/admin-login` remained unchanged.
+
+### Implemented
+- Removed the footer login-switch button from `StudentLoginPage`.
+- Removed the footer login-switch button from `AdminLoginPage`.
+- Removed the unused `Button` import from `AdminLoginPage`.
+
+### Validation
+- Manual code check -> Success
+
+### Files
+- `src/pages/StudentLoginPage.jsx`
+- `src/pages/AdminLoginPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Users can still access each login page directly by URL; only the in-page shortcut links were removed.
+
+---
+
+## 2026-03-13 - Sub-Admin Permission Controls
+
+### Request
+- Let the main admin configure each sub-admin's permissions from the sub-admin tab.
+
+### Scope
+- `src/stores/useAuthStore.js` sub-admin persistence/login payload.
+- `src/pages/AdminPage.jsx` sub-admin management UI and sub-admin admin-page access control.
+
+### Implemented
+- Added per-sub-admin `permissions` storage with defaults for `dashboard`, `learners`, `class`, `assessments`, `marketplace`, `subadmins`, and `settings`.
+- Included sub-admin permissions in login state and persistence migration.
+- Added permission checkboxes to the sub-admin create/edit modal.
+- Updated the sub-admin list to display the currently enabled permission badges.
+- Restricted admin sidebar tabs for logged-in sub-admins based on their saved permissions and auto-fallback to the first allowed view.
+
+### Validation
+- `npm run build` -> Sandbox failed (`spawn EPERM`), escalated success
+
+### Files
+- `src/stores/useAuthStore.js`
+- `src/pages/AdminPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Existing sub-admin accounts are migrated to full access by default unless specific permissions are later turned off by the main admin.

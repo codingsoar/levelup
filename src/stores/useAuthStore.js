@@ -10,6 +10,25 @@ const normalizeStudent = (student) => ({
     admissionYear: student.admissionYear || new Date().getFullYear(), // Default current year
 });
 
+const DEFAULT_SUBADMIN_PERMISSIONS = {
+    dashboard: true,
+    learners: true,
+    class: true,
+    assessments: true,
+    marketplace: true,
+    subadmins: true,
+    settings: true,
+};
+
+const normalizeSubAdmin = (subAdmin) => ({
+    ...subAdmin,
+    courseIds: Array.isArray(subAdmin?.courseIds) ? subAdmin.courseIds : [],
+    permissions: {
+        ...DEFAULT_SUBADMIN_PERMISSIONS,
+        ...(subAdmin?.permissions || {}),
+    },
+});
+
 export const useAuthStore = create(
     persist(
         (set, get) => ({
@@ -37,7 +56,17 @@ export const useAuthStore = create(
                 // 서브관리자 로그인 확인
                 const sub = get().subAdmins.find(s => s.adminId === adminId && s.password === password);
                 if (sub) {
-                    set({ user: { adminId: sub.adminId, name: sub.name, role: 'subadmin', courseIds: sub.courseIds || [] }, isAdmin: true });
+                    const normalizedSub = normalizeSubAdmin(sub);
+                    set({
+                        user: {
+                            adminId: normalizedSub.adminId,
+                            name: normalizedSub.name,
+                            role: 'subadmin',
+                            courseIds: normalizedSub.courseIds,
+                            permissions: normalizedSub.permissions,
+                        },
+                        isAdmin: true
+                    });
                     return true;
                 }
                 return false;
@@ -223,13 +252,13 @@ export const useAuthStore = create(
             // ═══════════════════════════════════════
             // 서브관리자 관리
             // ═══════════════════════════════════════
-            addSubAdmin: (adminId, password, name, courseIds) => {
+            addSubAdmin: (adminId, password, name, courseIds, permissions) => {
                 if (!adminId || !password || !name) return { ok: false, reason: 'invalid_input' };
                 const existing = get().subAdmins.find(s => s.adminId === adminId);
                 if (existing) return { ok: false, reason: 'already_exists' };
                 if (adminId === 'admin') return { ok: false, reason: 'reserved_id' };
                 set(state => ({
-                    subAdmins: [...state.subAdmins, { adminId: adminId.trim(), password: password.trim(), name: name.trim(), courseIds: courseIds || [] }]
+                    subAdmins: [...state.subAdmins, normalizeSubAdmin({ adminId: adminId.trim(), password: password.trim(), name: name.trim(), courseIds: courseIds || [], permissions })]
                 }));
                 return { ok: true };
             },
@@ -243,23 +272,32 @@ export const useAuthStore = create(
             updateSubAdmin: (adminId, updates) => {
                 set(state => ({
                     subAdmins: state.subAdmins.map(s =>
-                        s.adminId === adminId ? { ...s, ...updates } : s
+                        s.adminId === adminId ? normalizeSubAdmin({ ...s, ...updates }) : s
                     )
                 }));
             },
         }),
         {
             name: 'starquest-auth',
-            version: 3,
+            version: 4,
             migrate: (persistedState) => {
                 if (!persistedState) return persistedState;
                 return {
                     ...persistedState,
                     registeredStudents: (persistedState.registeredStudents || []).map(normalizeStudent),
-                    subAdmins: persistedState.subAdmins || [],
+                    subAdmins: (persistedState.subAdmins || []).map(normalizeSubAdmin),
                     user: persistedState.user?.role === 'student'
                         ? { ...persistedState.user, courseIds: Array.isArray(persistedState.user.courseIds) ? persistedState.user.courseIds : [] }
-                        : persistedState.user,
+                        : persistedState.user?.role === 'subadmin'
+                            ? {
+                                ...persistedState.user,
+                                courseIds: Array.isArray(persistedState.user.courseIds) ? persistedState.user.courseIds : [],
+                                permissions: {
+                                    ...DEFAULT_SUBADMIN_PERMISSIONS,
+                                    ...(persistedState.user.permissions || {}),
+                                },
+                            }
+                            : persistedState.user,
                 };
             },
         }

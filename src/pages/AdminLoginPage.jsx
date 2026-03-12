@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/useAuthStore';
-import { Button } from "@heroui/react";
 
 export default function AdminLoginPage() {
     const navigate = useNavigate();
@@ -114,18 +113,6 @@ export default function AdminLoginPage() {
                                 <span>Admin Login</span>
                             </button>
                         </form>
-
-                        {/* Footer Links */}
-                        <div className="text-center mt-2">
-                            <p className="text-slate-500 dark:text-slate-400 text-sm">
-                                <button
-                                    onClick={() => navigate('/')}
-                                    className="text-accent-pink hover:text-accent-pink/80 font-bold ml-1 transition-colors"
-                                >
-                                    Student Login
-                                </button>
-                            </p>
-                        </div>
                     </div>
 
                     {/* Bottom decorative accent */}

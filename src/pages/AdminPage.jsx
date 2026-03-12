@@ -3089,6 +3089,275 @@ const SettingsManagement = () => {
     );
 };
 
+const SUBADMIN_PERMISSION_OPTIONS = [
+    { key: 'dashboard', label: 'Dashboard' },
+    { key: 'learners', label: 'Learners' },
+    { key: 'class', label: 'Class' },
+    { key: 'assessments', label: 'Assessments' },
+    { key: 'marketplace', label: 'Marketplace' },
+    { key: 'subadmins', label: 'Sub-Admin' },
+    { key: 'settings', label: 'Settings' },
+];
+
+const SubAdminManagement = ({ subAdmins, courses, onAddSubAdmin, onRemoveSubAdmin, onUpdateSubAdmin }) => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingAdminId, setEditingAdminId] = useState(null);
+    const [formData, setFormData] = useState({
+        adminId: '',
+        name: '',
+        password: '',
+        permissions: Object.fromEntries(SUBADMIN_PERMISSION_OPTIONS.map(option => [option.key, true])),
+    });
+    const [error, setError] = useState('');
+
+    const resetForm = () => {
+        setFormData({
+            adminId: '',
+            name: '',
+            password: '',
+            permissions: Object.fromEntries(SUBADMIN_PERMISSION_OPTIONS.map(option => [option.key, true])),
+        });
+        setEditingAdminId(null);
+        setError('');
+    };
+
+    const openCreateModal = () => {
+        resetForm();
+        setIsModalOpen(true);
+    };
+
+    const openEditModal = (subAdmin) => {
+        setEditingAdminId(subAdmin.adminId);
+        setFormData({
+            adminId: subAdmin.adminId,
+            name: subAdmin.name,
+            password: subAdmin.password,
+            permissions: Object.fromEntries(
+                SUBADMIN_PERMISSION_OPTIONS.map(option => [option.key, subAdmin.permissions?.[option.key] !== false])
+            ),
+        });
+        setError('');
+        setIsModalOpen(true);
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+
+        const nextAdminId = formData.adminId.trim();
+        const nextName = formData.name.trim();
+        const nextPassword = formData.password.trim();
+        const fullCourseIds = courses.map(course => course.id);
+        const nextPermissions = formData.permissions;
+
+        if (!nextAdminId || !nextName || !nextPassword) {
+            setError('아이디, 이름, 비밀번호를 모두 입력하세요.');
+            return;
+        }
+
+        const duplicate = subAdmins.find(sub => sub.adminId === nextAdminId && sub.adminId !== editingAdminId);
+        if (duplicate) {
+            setError('이미 사용 중인 서브관리자 아이디입니다.');
+            return;
+        }
+
+        if (editingAdminId) {
+            onUpdateSubAdmin(editingAdminId, {
+                adminId: nextAdminId,
+                name: nextName,
+                password: nextPassword,
+                courseIds: fullCourseIds,
+                permissions: nextPermissions,
+            });
+        } else {
+            const result = onAddSubAdmin(nextAdminId, nextPassword, nextName, fullCourseIds, nextPermissions);
+            if (!result?.ok) {
+                if (result?.reason === 'already_exists') {
+                    setError('이미 사용 중인 서브관리자 아이디입니다.');
+                    return;
+                }
+                if (result?.reason === 'reserved_id') {
+                    setError('`admin` 아이디는 사용할 수 없습니다.');
+                    return;
+                }
+                setError('서브관리자 생성에 실패했습니다.');
+                return;
+            }
+        }
+
+        setIsModalOpen(false);
+        resetForm();
+    };
+
+    return (
+        <div className="max-w-6xl mx-auto space-y-8">
+            <div className="flex items-center justify-between gap-4">
+                <div>
+                    <h3 className="text-2xl font-bold text-white">Sub-Admin Management</h3>
+                    <p className="text-gray-400 text-sm mt-1">동료 교사용 서브관리자 계정을 만들고 관리합니다.</p>
+                </div>
+                <button
+                    onClick={openCreateModal}
+                    className="flex items-center gap-2 bg-admin-primary hover:bg-admin-primary/90 text-white px-5 py-2.5 rounded-xl font-medium text-sm transition-all shadow-lg shadow-admin-primary/20"
+                >
+                    <span className="material-symbols-outlined text-[18px]">person_add</span>
+                    <span>서브관리자 추가</span>
+                </button>
+            </div>
+
+            <div className="bg-admin-card-dark rounded-2xl border border-white/5 overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-white/5 text-gray-400 text-xs uppercase tracking-wider">
+                            <th className="px-6 py-4 font-semibold">이름</th>
+                            <th className="px-6 py-4 font-semibold">아이디</th>
+                            <th className="px-6 py-4 font-semibold">권한</th>
+                            <th className="px-6 py-4 font-semibold text-right">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 text-sm">
+                        {subAdmins.length === 0 && (
+                            <tr>
+                                <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
+                                    아직 생성된 서브관리자 계정이 없습니다.
+                                </td>
+                            </tr>
+                        )}
+                        {subAdmins.map(subAdmin => (
+                            <tr key={subAdmin.adminId} className="hover:bg-white/5 transition-colors">
+                                <td className="px-6 py-4 font-medium text-white">{subAdmin.name}</td>
+                                <td className="px-6 py-4 text-gray-300 font-mono">@{subAdmin.adminId}</td>
+                                <td className="px-6 py-4 text-gray-300">
+                                    <div className="flex flex-wrap gap-2">
+                                        {SUBADMIN_PERMISSION_OPTIONS.filter(option => subAdmin.permissions?.[option.key] !== false).map(option => (
+                                            <span key={option.key} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-admin-secondary/10 text-admin-secondary border border-admin-secondary/20">
+                                                {option.label}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="flex justify-end gap-2">
+                                        <button
+                                            onClick={() => openEditModal(subAdmin)}
+                                            className="px-3 py-1.5 rounded-lg bg-white/5 text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+                                        >
+                                            수정
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (window.confirm(`${subAdmin.name} 서브관리자 계정을 삭제하시겠습니까?`)) {
+                                                    onRemoveSubAdmin(subAdmin.adminId);
+                                                }
+                                            }}
+                                            className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                                        >
+                                            삭제
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {isModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-admin-card-dark w-full max-w-md rounded-2xl border border-white/10 shadow-2xl p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold text-white">{editingAdminId ? '서브관리자 수정' : '서브관리자 추가'}</h3>
+                            <button onClick={() => { setIsModalOpen(false); resetForm(); }} className="text-gray-400 hover:text-white transition-colors">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">이름</label>
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                    className="w-full bg-background-dark border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-admin-primary transition-colors"
+                                    placeholder="예: 홍길동"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">아이디</label>
+                                <input
+                                    type="text"
+                                    value={formData.adminId}
+                                    onChange={e => setFormData({ ...formData, adminId: e.target.value })}
+                                    className="w-full bg-background-dark border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-admin-primary transition-colors"
+                                    placeholder="예: teacher01"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">비밀번호</label>
+                                <input
+                                    type="text"
+                                    value={formData.password}
+                                    onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                    className="w-full bg-background-dark border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-admin-primary transition-colors"
+                                    placeholder="비밀번호 입력"
+                                    required
+                                />
+                            </div>
+
+                            <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-4">
+                                <p className="text-sm font-medium text-white mb-3">권한 설정</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {SUBADMIN_PERMISSION_OPTIONS.map(option => (
+                                        <label key={option.key} className="flex items-center gap-2 text-sm text-gray-300">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.permissions[option.key]}
+                                                onChange={e => setFormData({
+                                                    ...formData,
+                                                    permissions: {
+                                                        ...formData.permissions,
+                                                        [option.key]: e.target.checked,
+                                                    },
+                                                })}
+                                                className="h-4 w-4 rounded border-white/20 bg-background-dark text-admin-primary focus:ring-admin-primary"
+                                            />
+                                            <span>{option.label}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {error && (
+                                <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                                    {error}
+                                </div>
+                            )}
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => { setIsModalOpen(false); resetForm(); }}
+                                    className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-white hover:bg-white/5 transition-colors font-medium"
+                                >
+                                    취소
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 px-4 py-2.5 rounded-xl bg-admin-primary hover:bg-admin-primary/90 text-white transition-colors font-medium shadow-lg shadow-admin-primary/20"
+                                >
+                                    {editingAdminId ? '저장' : '생성'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 
 export default function AdminPage() {
@@ -3098,9 +3367,7 @@ export default function AdminPage() {
     const { courses, addCourse, deleteCourse } = useStageStore();
     const { submissions, totalStars, progress } = useProgressStore();
     const isSubAdmin = user?.role === 'subadmin';
-    const isMainAdmin = user?.role === 'admin';
-    const visibleCourses = isSubAdmin ? courses.filter(c => (user.courseIds || []).includes(c.id)) : courses;
-    const [currentView, setCurrentView] = useState(isSubAdmin ? 'class' : 'dashboard');
+    const [currentView, setCurrentView] = useState('dashboard');
     const [searchTerm, setSearchTerm] = useState('');
     const [showNotifPanel, setShowNotifPanel] = useState(false);
     const [notifTarget, setNotifTarget] = useState('all');
@@ -3114,6 +3381,23 @@ export default function AdminPage() {
     const { purchases } = useMarketplaceStore();
 
     const totalStarsIssued = Object.values(totalStars).reduce((sum, s) => sum + s, 0);
+    const subAdminPermissions = user?.permissions || {};
+    const hasViewAccess = (view) => !isSubAdmin || subAdminPermissions[view] !== false;
+    const visibleAdminViews = [
+        { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', emphasized: true },
+        { id: 'learners', label: 'Learners', icon: 'school' },
+        { id: 'class', label: 'Class', icon: 'menu_book' },
+        { id: 'assessments', label: 'Assessments', icon: 'quiz' },
+        { id: 'marketplace', label: 'Marketplace', icon: 'storefront' },
+        { id: 'subadmins', label: '?쒕툕愿由ъ옄', icon: 'supervisor_account' },
+        { id: 'settings', label: 'Settings', icon: 'settings' },
+    ].filter(view => hasViewAccess(view.id));
+
+    useEffect(() => {
+        if (!visibleAdminViews.some(view => view.id === currentView)) {
+            setCurrentView(visibleAdminViews[0]?.id || 'dashboard');
+        }
+    }, [currentView, visibleAdminViews]);
 
     const courseCompletion = useMemo(() => {
         if (courses.length === 0 || registeredStudents.length === 0) return 0;
@@ -3148,8 +3432,7 @@ export default function AdminPage() {
                 </div>
 
                 <nav className="flex-1 px-4 py-4 flex flex-col gap-2">
-                    {/* Dashboard (Active) - admin only */}
-                    {isMainAdmin && <button
+                    {hasViewAccess('dashboard') && <button
                         onClick={() => setCurrentView('dashboard')}
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg w-full text-left transition-all group ${currentView === 'dashboard'
                             ? 'bg-admin-secondary shadow-lg shadow-admin-secondary/20'
@@ -3159,8 +3442,7 @@ export default function AdminPage() {
                         <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>dashboard</span>
                         <span className="text-white font-semibold">Dashboard</span>
                     </button>}
-                    {/* Learners - admin only */}
-                    {isMainAdmin && <button
+                    {hasViewAccess('learners') && <button
                         onClick={() => setCurrentView('learners')}
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg w-full text-left transition-all group ${currentView === 'learners'
                             ? 'bg-admin-secondary shadow-lg shadow-admin-secondary/20'
@@ -3171,7 +3453,7 @@ export default function AdminPage() {
                         <span className={`font-medium ${currentView === 'learners' ? 'text-white' : 'text-white/80 group-hover:text-white'}`}>Learners</span>
                     </button>}
                     {/* Class (Project Classes) */}
-                    <button
+                    {hasViewAccess('class') && <button
                         onClick={() => setCurrentView('class')}
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg w-full text-left transition-all group ${currentView === 'class'
                             ? 'bg-admin-secondary shadow-lg shadow-admin-secondary/20'
@@ -3180,9 +3462,9 @@ export default function AdminPage() {
                     >
                         <span className="material-symbols-outlined group-hover:scale-110 transition-transform text-white">menu_book</span>
                         <span className={`font-medium ${currentView === 'class' ? 'text-white' : 'text-white/80 group-hover:text-white'}`}>Class</span>
-                    </button>
+                    </button>}
                     {/* Assessments */}
-                    <button
+                    {hasViewAccess('assessments') && <button
                         onClick={() => setCurrentView('assessments')}
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg w-full text-left transition-all group ${currentView === 'assessments'
                             ? 'bg-admin-secondary shadow-lg shadow-admin-secondary/20'
@@ -3191,9 +3473,8 @@ export default function AdminPage() {
                     >
                         <span className="material-symbols-outlined group-hover:scale-110 transition-transform text-white">quiz</span>
                         <span className={`font-medium ${currentView === 'assessments' ? 'text-white' : 'text-white/80 group-hover:text-white'}`}>Assessments</span>
-                    </button>
-                    {/* Marketplace - admin only */}
-                    {isMainAdmin && <button
+                    </button>}
+                    {hasViewAccess('marketplace') && <button
                         onClick={() => setCurrentView('marketplace')}
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg w-full text-left transition-all group ${currentView === 'marketplace'
                             ? 'bg-admin-secondary shadow-lg shadow-admin-secondary/20'
@@ -3203,8 +3484,7 @@ export default function AdminPage() {
                         <span className="material-symbols-outlined group-hover:scale-110 transition-transform text-white">storefront</span>
                         <span className={`font-medium ${currentView === 'marketplace' ? 'text-white' : 'text-white/80 group-hover:text-white'}`}>Marketplace</span>
                     </button>}
-                    {/* Sub-Admin Management - admin only */}
-                    {isMainAdmin && <button
+                    {hasViewAccess('subadmins') && <button
                         onClick={() => setCurrentView('subadmins')}
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg w-full text-left transition-all group ${currentView === 'subadmins'
                             ? 'bg-admin-secondary shadow-lg shadow-admin-secondary/20'
@@ -3214,8 +3494,7 @@ export default function AdminPage() {
                         <span className="material-symbols-outlined group-hover:scale-110 transition-transform text-white">supervisor_account</span>
                         <span className={`font-medium ${currentView === 'subadmins' ? 'text-white' : 'text-white/80 group-hover:text-white'}`}>서브관리자</span>
                     </button>}
-                    {/* Settings - admin only */}
-                    {isMainAdmin && <button
+                    {hasViewAccess('settings') && <button
                         onClick={() => setCurrentView('settings')}
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg w-full text-left transition-all group ${currentView === 'settings'
                             ? 'bg-admin-secondary shadow-lg shadow-admin-secondary/20'
@@ -3421,10 +3700,19 @@ export default function AdminPage() {
                     {currentView === 'marketplace' && (
                         <MarketplaceManagement />
                     )}
+                    {currentView === 'subadmins' && (
+                        <SubAdminManagement
+                            subAdmins={subAdmins}
+                            courses={courses}
+                            onAddSubAdmin={addSubAdmin}
+                            onRemoveSubAdmin={removeSubAdmin}
+                            onUpdateSubAdmin={updateSubAdmin}
+                        />
+                    )}
                     {currentView === 'settings' && (
                         <SettingsManagement />
                     )}
-                    {currentView !== 'dashboard' && currentView !== 'learners' && currentView !== 'class' && currentView !== 'assessments' && currentView !== 'marketplace' && currentView !== 'settings' && (
+                    {currentView !== 'dashboard' && currentView !== 'learners' && currentView !== 'class' && currentView !== 'assessments' && currentView !== 'marketplace' && currentView !== 'subadmins' && currentView !== 'settings' && (
                         <div className="flex items-center justify-center h-full text-gray-500">
                             Component for {currentView} is under construction.
                         </div>
