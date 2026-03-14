@@ -285,9 +285,23 @@ export default function StudentDashboardPage() {
                             )}
                         </span>
                         {hasQuiz ? (
-                            <Button color="primary" isDisabled={!videoEnded} onPress={() => setQuizStarted(true)}>Take Quiz →</Button>
+                            <Button
+                                color="primary"
+                                className={isDark ? 'bg-primary text-white font-bold' : 'bg-primary text-white font-bold'}
+                                isDisabled={!videoEnded}
+                                onPress={() => setQuizStarted(true)}
+                            >
+                                Take Quiz →
+                            </Button>
                         ) : (
-                            <Button color="success" className="text-white font-bold" isDisabled={!videoEnded} onPress={onComplete}>Complete Mission →</Button>
+                            <Button
+                                color="success"
+                                className={isDark ? 'bg-green-600 text-white font-bold' : 'bg-green-600 text-white font-bold'}
+                                isDisabled={!videoEnded}
+                                onPress={onComplete}
+                            >
+                                Complete Mission →
+                            </Button>
                         )}
                     </div>
                 </div>
@@ -317,11 +331,32 @@ export default function StudentDashboardPage() {
                             </CardBody>
                         </Card>
                         <div className="flex justify-between">
-                            <Button variant="flat" isDisabled={currentQ === 0} onPress={() => setCurrentQ(p => p - 1)}>Back</Button>
+                            <Button
+                                variant="flat"
+                                className={isDark ? 'text-white font-medium' : 'text-slate-900 font-medium border border-slate-300 bg-white'}
+                                isDisabled={currentQ === 0}
+                                onPress={() => setCurrentQ(p => p - 1)}
+                            >
+                                Back
+                            </Button>
                             {currentQ < questions.length - 1 ? (
-                                <Button color="primary" isDisabled={answers[currentQ] === undefined} onPress={() => setCurrentQ(p => p + 1)}>Next</Button>
+                                <Button
+                                    color="primary"
+                                    className="bg-primary text-white font-bold"
+                                    isDisabled={answers[currentQ] === undefined}
+                                    onPress={() => setCurrentQ(p => p + 1)}
+                                >
+                                    Next
+                                </Button>
                             ) : (
-                                <Button color="success" className="text-white font-bold" isDisabled={Object.keys(answers).length < questions.length} onPress={() => setShowResult(true)}>Submit</Button>
+                                <Button
+                                    color="success"
+                                    className="bg-green-600 text-white font-bold"
+                                    isDisabled={Object.keys(answers).length < questions.length}
+                                    onPress={() => setShowResult(true)}
+                                >
+                                    Submit
+                                </Button>
                             )}
                         </div>
                     </div>
@@ -330,8 +365,19 @@ export default function StudentDashboardPage() {
                         <div className="text-5xl">{passed ? '🎉' : '😅'}</div>
                         <h3 className="text-2xl font-bold text-slate-800">{passed ? 'Passed!' : 'Try Again'}</h3>
                         <p className="text-slate-500">{correctCount} / {questions.length} correct</p>
-                        {passed ? <Button color="success" className="text-white font-bold" onPress={onComplete}>Claim Star</Button> :
-                            <Button color="primary" onPress={() => { setShowResult(false); setAnswers({}); setCurrentQ(0); }}>Restart Quiz</Button>}
+                        {passed ? (
+                            <Button color="success" className="bg-green-600 text-white font-bold" onPress={onComplete}>
+                                Claim Star
+                            </Button>
+                        ) : (
+                            <Button
+                                color="primary"
+                                className="bg-primary text-white font-bold"
+                                onPress={() => { setShowResult(false); setAnswers({}); setCurrentQ(0); }}
+                            >
+                                Restart Quiz
+                            </Button>
+                        )}
                     </Card>
                 )}
             </div>
@@ -942,11 +988,11 @@ export default function StudentDashboardPage() {
                                     {selectedDifficulty === 'hard' && <PracticeView mission={selectedMission} onSubmit={handlePracticeSubmit} />}
 
                                     <Modal isOpen={showReflectionModal} onClose={closeReflectionModal} placement="center" backdrop="blur">
-                                        <ModalContent>
-                                            <ModalBody className="py-8 space-y-4">
+                                        <ModalContent className="border-2 border-slate-300 bg-white shadow-2xl">
+                                            <ModalBody className="space-y-4 py-8 text-slate-900">
                                                 <div className="space-y-1">
                                                     <h2 className="text-2xl font-bold text-slate-900">Reflection</h2>
-                                                    <p className="text-slate-500 text-sm">오늘 배운 것 또는 어려웠던 점을 한 문장으로 남겨주세요.</p>
+                                                    <p className="text-sm text-slate-700">오늘 배운 것 또는 어려웠던 점을 한 문장으로 남겨주세요.</p>
                                                 </div>
                                                 <textarea
                                                     value={reflectionText}
@@ -956,10 +1002,10 @@ export default function StudentDashboardPage() {
                                                     }}
                                                     maxLength={200}
                                                     rows={4}
-                                                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                    className="w-full rounded-xl border-2 border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/40"
                                                     placeholder="예: 개념은 이해했지만 실제 과제에 적용하는 과정은 아직 어려웠다."
                                                 />
-                                                <div className="flex items-center justify-between text-xs text-slate-400">
+                                                <div className="flex items-center justify-between text-xs text-slate-700">
                                                     <span>{reflectionError ? <span className="text-red-500">{reflectionError}</span> : '짧고 구체적으로 적어보세요.'}</span>
                                                     <span>{reflectionText.length}/200</span>
                                                 </div>

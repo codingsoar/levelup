@@ -405,6 +405,7 @@ const LearnersManagement = ({ registeredStudents, onAddStudent, onDeleteStudent,
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isBadgeModalOpen, setIsBadgeModalOpen] = useState(false);
     const [currentStudent, setCurrentStudent] = useState(null); // For editing and viewing badges
+    const isDark = useThemeStore(state => state.isDark);
     
     // Badge store selector
     const getUnlockedBadges = useBadgeStore(state => state.getUnlockedBadges);
@@ -539,10 +540,14 @@ const LearnersManagement = ({ registeredStudents, onAddStudent, onDeleteStudent,
                         <select
                             value={filterYear}
                             onChange={(e) => setFilterYear(e.target.value)}
-                            className="bg-white/5 border border-white/10 rounded-lg text-sm text-white px-3 py-1.5 focus:outline-none focus:border-admin-primary"
+                            className={`rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:border-admin-primary ${
+                                isDark
+                                    ? 'border-white/10 bg-white/5 text-white'
+                                    : 'border-slate-300 bg-white text-slate-900'
+                            }`}
                         >
-                            <option value="all" className="bg-gray-800">All Years</option>
-                            {availableYears.map(y => <option key={y} value={y} className="bg-gray-800">{y}</option>)}
+                            <option value="all" className={isDark ? 'bg-[#1e1e2e] text-white' : 'bg-white text-slate-900'}>All Years</option>
+                            {availableYears.map(y => <option key={y} value={y} className={isDark ? 'bg-[#1e1e2e] text-white' : 'bg-white text-slate-900'}>{y}</option>)}
                         </select>
                     </div>
                     <div className="flex items-center gap-2">
@@ -550,10 +555,14 @@ const LearnersManagement = ({ registeredStudents, onAddStudent, onDeleteStudent,
                         <select
                             value={filterGrade}
                             onChange={(e) => setFilterGrade(e.target.value)}
-                            className="bg-white/5 border border-white/10 rounded-lg text-sm text-white px-3 py-1.5 focus:outline-none focus:border-admin-primary"
+                            className={`rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:border-admin-primary ${
+                                isDark
+                                    ? 'border-white/10 bg-white/5 text-white'
+                                    : 'border-slate-300 bg-white text-slate-900'
+                            }`}
                         >
-                            <option value="all" className="bg-gray-800">All Grades</option>
-                            {[1, 2, 3].map(g => <option key={g} value={g} className="bg-gray-800">Grade {g}</option>)}
+                            <option value="all" className={isDark ? 'bg-[#1e1e2e] text-white' : 'bg-white text-slate-900'}>All Grades</option>
+                            {[1, 2, 3].map(g => <option key={g} value={g} className={isDark ? 'bg-[#1e1e2e] text-white' : 'bg-white text-slate-900'}>Grade {g}</option>)}
                         </select>
                     </div>
                 </div>
@@ -3588,6 +3597,7 @@ const SettingsManagement = () => {
 };
 
 const ReflectionManagement = ({ courses, registeredStudents, reflections, isSubAdmin, accessibleCourseIds }) => {
+    const isDark = useThemeStore(state => state.isDark);
     const availableCourses = useMemo(() => {
         if (!isSubAdmin) return courses;
         const allowedCourseIds = new Set(accessibleCourseIds || []);
@@ -3652,10 +3662,18 @@ const ReflectionManagement = ({ courses, registeredStudents, reflections, isSubA
                     <select
                         value={activeCourseId}
                         onChange={event => setSelectedCourseId(event.target.value)}
-                        className="w-full rounded-2xl border border-white/10 bg-admin-card-dark px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-admin-secondary"
+                        className={`w-full rounded-2xl border px-4 py-3 focus:outline-none focus:ring-2 focus:ring-admin-secondary ${
+                            isDark
+                                ? 'border-white/10 bg-admin-card-dark text-white'
+                                : 'border-slate-300 bg-white text-slate-900'
+                        }`}
                     >
                         {availableCourses.map(course => (
-                            <option key={course.id} value={course.id} className="bg-[#1e1e2e] text-white">
+                            <option
+                                key={course.id}
+                                value={course.id}
+                                className={isDark ? 'bg-[#1e1e2e] text-white' : 'bg-white text-slate-900'}
+                            >
                                 {course.title}
                             </option>
                         ))}

@@ -961,3 +961,99 @@ Copy this block for every new entry:
 
 ### Notes
 - None.
+
+## 2026-03-15 - Learners Dropdown Theme Fix
+
+### Request
+- In the admin `Learners` tab, make the dropdown readable in light mode instead of rendering as black.
+
+### Scope
+- `src/pages/AdminPage.jsx` learners filter dropdown styling only.
+- No data, filtering behavior, or layout changes.
+
+### Implemented
+- Wired `LearnersManagement` to the current theme state.
+- Updated the `Year` and `Grade` `<select>` controls to use light-mode and dark-mode specific text/background/border styles.
+- Updated the dropdown `<option>` styles so opened menus remain readable in both themes.
+
+### Validation
+- `npx eslint src/pages/AdminPage.jsx` -> Success
+
+### Files
+- `src/pages/AdminPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- The fix mirrors the earlier `Course Progress` dropdown theme handling to keep admin select styling consistent.
+
+## 2026-03-15 - Reflection Dropdown Theme Fix
+
+### Request
+- In the admin `Reflection` tab, make the course dropdown readable in both light and dark themes.
+
+### Scope
+- `src/pages/AdminPage.jsx` reflection course selector styling only.
+- No reflection data or layout changes.
+
+### Implemented
+- Wired `ReflectionManagement` to the current theme state.
+- Updated the reflection course `<select>` to use theme-specific border, background, and text colors.
+- Updated the dropdown `<option>` styles so the opened menu remains readable in light mode as well.
+
+### Validation
+- `npx eslint src/pages/AdminPage.jsx` -> Success
+
+### Files
+- `src/pages/AdminPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- The reflection selector now follows the same theme-handling pattern as the admin `Course Progress` and `Learners` dropdowns.
+
+## 2026-03-15 - Reflection Modal Contrast Fix
+
+### Request
+- Make the popup shown when writing a reflection easier to read.
+- Change the popup text to black and add visible line borders.
+
+### Scope
+- `src/pages/StudentDashboardPage.jsx` student reflection modal styling only.
+- No reflection save logic or flow changes.
+
+### Implemented
+- Added a visible border and white background styling to the reflection modal container.
+- Changed the modal helper text and counter text to darker slate colors for readability.
+- Strengthened the textarea border and changed the input text/placeholder contrast for clearer separation.
+
+### Validation
+- `npx eslint src/pages/StudentDashboardPage.jsx` -> Success
+
+### Files
+- `src/pages/StudentDashboardPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- The update targets the mission-completion reflection popup shown on the student page.
+
+## 2026-03-15 - Video Quiz Action Button Contrast Fix
+
+### Request
+- In `video&quiz` stages, make the `Submit` and `Claim Star` text readable under the current theme.
+
+### Scope
+- `src/pages/StudentDashboardPage.jsx` video/quiz mission action button styling only.
+- No quiz logic or completion rules changed.
+
+### Implemented
+- Added explicit readable text/background styling to the `Take Quiz`, `Complete Mission`, `Next`, `Submit`, `Claim Star`, and `Restart Quiz` buttons in `VideoView`.
+- Kept button states and handlers unchanged while preventing theme-dependent text visibility issues.
+
+### Validation
+- `npx eslint src/pages/StudentDashboardPage.jsx` -> Success
+
+### Files
+- `src/pages/StudentDashboardPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- The fix is localized to the student `VideoView` mission flow where HeroUI button defaults were not consistently readable across themes.
