@@ -578,11 +578,15 @@ const LearnersManagement = ({ registeredStudents, onAddStudent, onDeleteStudent,
                 )}
             </div>
 
-            <div className="bg-admin-card-dark rounded-2xl border border-white/5">
+            <div className={`rounded-2xl border ${
+                isDark ? 'bg-admin-card-dark border-white/5' : 'bg-white border-slate-300'
+            }`}>
                 <div>
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-white/5 text-gray-400 text-xs uppercase tracking-wider">
+                            <tr className={`text-xs uppercase tracking-wider ${
+                                isDark ? 'bg-white/5 text-gray-400' : 'bg-slate-100 text-slate-600'
+                            }`}>
                                 <th className="px-6 py-4 font-semibold">Year</th>
                                 <th className="px-6 py-4 font-semibold">Grade</th>
                                 <th className="px-6 py-4 font-semibold">Name</th>
@@ -591,11 +595,13 @@ const LearnersManagement = ({ registeredStudents, onAddStudent, onDeleteStudent,
                                 <th className="px-6 py-4 font-semibold text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5 text-sm">
+                        <tbody className={`text-sm ${isDark ? 'divide-y divide-white/5' : 'divide-y divide-slate-200'}`}>
                             {filteredStudents.map((student) => (
-                                <tr key={student.studentId} className="group hover:bg-white/5 transition-colors">
-                                    <td className="px-6 py-4 text-gray-300 font-medium">{student.admissionYear || '-'}</td>
-                                    <td className="px-6 py-4 text-gray-300">
+                                <tr key={student.studentId} className={`group transition-colors ${
+                                    isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'
+                                }`}>
+                                    <td className={`px-6 py-4 font-medium ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{student.admissionYear || '-'}</td>
+                                    <td className={`px-6 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>
                                         <span className={`px-2 py-1 rounded-md text-xs font-bold ${student.grade === 1 ? 'bg-yellow-500/10 text-yellow-400' :
                                             student.grade === 2 ? 'bg-orange-500/10 text-orange-400' :
                                                 'bg-red-500/10 text-red-400'
@@ -606,17 +612,17 @@ const LearnersManagement = ({ registeredStudents, onAddStudent, onDeleteStudent,
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-full bg-cover bg-center" style={{ backgroundImage: `url('https://ui-avatars.com/api/?name=${student.name}&background=random')` }}></div>
-                                            <span className="font-medium text-white">{student.name}</span>
+                                            <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{student.name}</span>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 text-gray-300">{student.studentId}</td>
-                                    <td className="px-6 py-4 text-gray-300">
+                                    <td className={`px-6 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{student.studentId}</td>
+                                    <td className={`px-6 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>
                                         {student.courseIds?.length > 0 ? (
                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-admin-secondary/10 text-admin-secondary border border-admin-secondary/20">
                                                 {student.courseIds.length} Courses
                                             </span>
                                         ) : (
-                                            <span className="text-gray-500 italic">None</span>
+                                            <span className={isDark ? 'text-gray-500 italic' : 'text-slate-500 italic'}>None</span>
                                         )}
                                     </td>
                                     <td className="px-6 py-4 text-right relative">
@@ -1409,6 +1415,7 @@ const EnrollStudentModal = ({ isOpen, onClose, courseId, onEnroll }) => {
 const CourseEditor = ({ course, onBack }) => {
     const { addStage, updateStage, deleteStage, getCourse } = useStageStore();
     const { registeredStudents, enrollStudent, unenrollStudent } = useAuthStore();
+    const isDark = useThemeStore(state => state.isDark);
 
     // Re-fetch course to ensure fresh state
     const currentCourse = getCourse(course.id) || course;
@@ -1530,13 +1537,17 @@ const CourseEditor = ({ course, onBack }) => {
                 /* Stage List */
                 <div className="space-y-4">
                     {currentCourse.stages.length === 0 ? (
-                        <div className="text-center py-20 bg-admin-card-dark rounded-2xl border border-white/5 border-dashed">
+                        <div className={`text-center py-20 rounded-2xl border border-dashed ${
+                            isDark ? 'bg-admin-card-dark border-white/5' : 'bg-white border-slate-300'
+                        }`}>
                             <span className="material-symbols-outlined text-4xl text-gray-600 mb-2">layers</span>
                             <p className="text-gray-500">No stages yet. Add one to start designing the curriculum.</p>
                         </div>
                     ) : (
                         currentCourse.stages.sort((a, b) => a.order - b.order).map((stage, index) => (
-                            <div key={stage.id} className="bg-admin-card-dark rounded-xl border border-white/5 overflow-hidden">
+                            <div key={stage.id} className={`rounded-xl border overflow-hidden ${
+                                isDark ? 'bg-admin-card-dark border-white/5' : 'bg-white border-slate-300'
+                            }`}>
                                 {/* Stage Header */}
                                 <div className="p-4 bg-white/5 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -1571,11 +1582,15 @@ const CourseEditor = ({ course, onBack }) => {
                                 </div>
 
                                 {/* Missions Grid */}
-                                <div className="grid grid-cols-3 gap-4 p-4 border-t border-white/5">
+                                <div className={`grid grid-cols-3 gap-4 p-4 border-t ${
+                                    isDark ? 'border-white/5' : 'border-slate-200'
+                                }`}>
                                     {['easy', 'normal', 'hard'].map(difficulty => {
                                         const mission = stage.missions?.[difficulty];
                                         return (
-                                            <div key={difficulty} className="bg-background-dark rounded-lg p-3 border border-white/5 flex flex-col gap-2 relative group hover:border-admin-secondary/30 transition-colors">
+                                            <div key={difficulty} className={`rounded-lg p-3 border flex flex-col gap-2 relative group hover:border-admin-secondary/30 transition-colors ${
+                                                isDark ? 'bg-background-dark border-white/5' : 'bg-slate-50 border-slate-200'
+                                            }`}>
                                                 <div className="flex justify-between items-start">
                                                     <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${difficulty === 'easy' ? 'bg-admin-green/10 text-admin-green' :
                                                         difficulty === 'normal' ? 'bg-admin-secondary/10 text-admin-secondary' :
@@ -1614,17 +1629,21 @@ const CourseEditor = ({ course, onBack }) => {
                 </div>
             ) : (
                 /* Student List */
-                <div className="bg-admin-card-dark rounded-2xl border border-white/5 overflow-hidden">
+                <div className={`rounded-2xl border overflow-hidden ${
+                    isDark ? 'bg-admin-card-dark border-white/5' : 'bg-white border-slate-300'
+                }`}>
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-white/5 text-gray-400 text-xs uppercase tracking-wider">
+                            <tr className={`text-xs uppercase tracking-wider ${
+                                isDark ? 'bg-white/5 text-gray-400' : 'bg-slate-100 text-slate-600'
+                            }`}>
                                 <th className="px-6 py-4 font-semibold">Name</th>
                                 <th className="px-6 py-4 font-semibold">Student ID</th>
                                 <th className="px-6 py-4 font-semibold">Grade</th>
                                 <th className="px-6 py-4 font-semibold text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5 text-sm">
+                        <tbody className={`text-sm ${isDark ? 'divide-y divide-white/5' : 'divide-y divide-slate-200'}`}>
                             {enrolledStudents.length === 0 ? (
                                 <tr>
                                     <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
@@ -1633,10 +1652,10 @@ const CourseEditor = ({ course, onBack }) => {
                                 </tr>
                             ) : (
                                 enrolledStudents.map(student => (
-                                    <tr key={student.studentId} className="hover:bg-white/5 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-white">{student.name}</td>
-                                        <td className="px-6 py-4 text-gray-400">{student.studentId}</td>
-                                        <td className="px-6 py-4 text-gray-400">{student.grade}</td>
+                                    <tr key={student.studentId} className={`transition-colors ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}>
+                                        <td className={`px-6 py-4 font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{student.name}</td>
+                                        <td className={`px-6 py-4 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>{student.studentId}</td>
+                                        <td className={`px-6 py-4 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>{student.grade}</td>
                                         <td className="px-6 py-4 text-right">
                                             <button
                                                 onClick={() => {
@@ -1716,6 +1735,7 @@ const CourseEditor = ({ course, onBack }) => {
 
 const ClassManagement = ({ courses, onAddCourse, onDeleteCourse }) => {
     const [selectedCourse, setSelectedCourse] = useState(null);
+    const isDark = useThemeStore(state => state.isDark);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [openMenuId, setOpenMenuId] = useState(null);
     const [formData, setFormData] = useState({ title: '', description: '' });
@@ -1768,22 +1788,26 @@ const ClassManagement = ({ courses, onAddCourse, onDeleteCourse }) => {
                 </button>
             </div>
 
-            <div className="bg-admin-card-dark rounded-2xl border border-white/5">
+            <div className={`rounded-2xl border ${
+                isDark ? 'bg-admin-card-dark border-white/5' : 'bg-white border-slate-300'
+            }`}>
                 <div>
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-white/5 text-gray-400 text-xs uppercase tracking-wider">
+                            <tr className={`text-xs uppercase tracking-wider ${
+                                isDark ? 'bg-white/5 text-gray-400' : 'bg-slate-100 text-slate-600'
+                            }`}>
                                 <th className="px-6 py-4 font-semibold">Class Name</th>
                                 <th className="px-6 py-4 font-semibold">Description</th>
                                 <th className="px-6 py-4 font-semibold">Stages</th>
                                 <th className="px-6 py-4 font-semibold text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5 text-sm">
+                        <tbody className={`text-sm ${isDark ? 'divide-y divide-white/5' : 'divide-y divide-slate-200'}`}>
                             {courses.map((course) => (
                                 <tr
                                     key={course.id}
-                                    className="group hover:bg-white/5 transition-colors cursor-pointer"
+                                    className={`group transition-colors cursor-pointer ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}
                                     onClick={() => setSelectedCourse(course)}
                                 >
                                     <td className="px-6 py-4">
@@ -1791,11 +1815,11 @@ const ClassManagement = ({ courses, onAddCourse, onDeleteCourse }) => {
                                             <div className="w-10 h-10 rounded-lg bg-admin-primary/20 flex items-center justify-center text-2xl">
                                                 {course.icon}
                                             </div>
-                                            <span className="font-medium text-white">{course.title}</span>
+                                            <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{course.title}</span>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 text-gray-300 max-w-xs truncate">{course.description}</td>
-                                    <td className="px-6 py-4 text-gray-300">
+                                    <td className={`px-6 py-4 max-w-xs truncate ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{course.description}</td>
+                                    <td className={`px-6 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-admin-secondary/10 text-admin-secondary border border-admin-secondary/20">
                                             {course.stages?.length || 0} Stages
                                         </span>
@@ -1917,6 +1941,7 @@ const ClassManagement = ({ courses, onAddCourse, onDeleteCourse }) => {
 };
 
 const AssessmentsManagement = ({ courses, registeredStudents }) => {
+    const isDark = useThemeStore(state => state.isDark);
     const [selectedCourseId, setSelectedCourseId] = useState(courses.length > 0 ? courses[0].id : '');
     const selectedCourse = courses.find(c => c.id === selectedCourseId);
     const {
@@ -2419,8 +2444,10 @@ const AssessmentsManagement = ({ courses, registeredStudents }) => {
                 const criteria = area.assessmentElements || [];
                 return (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setScoringSessionModal(null)}>
-                        <div className="bg-[#1e1e2e] rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-y-auto shadow-2xl border border-white/10 m-4" onClick={e => e.stopPropagation()}>
-                            <div className="p-6 border-b border-white/10">
+                    <div className={`rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-y-auto shadow-2xl border m-4 ${
+                        isDark ? 'bg-[#1e1e2e] border-white/10' : 'bg-white border-slate-300'
+                    }`} onClick={e => e.stopPropagation()}>
+                            <div className={`p-6 ${isDark ? 'border-b border-white/10' : 'border-b border-slate-200'}`}>
                                 <div className="flex items-center justify-between">
                                     <h4 className="text-lg font-bold text-white">{area.name} — 수업별 채점</h4>
                                     <span className={`px-2 py-1 rounded-lg text-[10px] font-medium ${isChecklistMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-admin-primary/20 text-admin-primary'}`}>
@@ -2429,7 +2456,9 @@ const AssessmentsManagement = ({ courses, registeredStudents }) => {
                                 </div>
                                 <div className="flex gap-1.5 mt-2">
                                     {area.scoringLevels.map(lv => (
-                                        <span key={lv.id} className="text-[10px] bg-white/10 text-gray-300 px-2 py-0.5 rounded-full">{lv.label}: {lv.score}점</span>
+                                        <span key={lv.id} className={`text-[10px] px-2 py-0.5 rounded-full ${
+                                            isDark ? 'bg-white/10 text-gray-300' : 'bg-slate-100 text-slate-700'
+                                        }`}>{lv.label}: {lv.score}점</span>
                                     ))}
                                 </div>
                             </div>
@@ -2469,9 +2498,9 @@ const AssessmentsManagement = ({ courses, registeredStudents }) => {
                                     const currentScore = activeSession.scores[student.studentId];
 
                                     return (
-                                        <div className="bg-white/5 rounded-xl border border-white/10">
+                                        <div className={`rounded-xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
                                             {/* 학생 선택 영역 */}
-                                            <div className="flex items-center gap-2 p-4 border-b border-white/10">
+                                            <div className={`flex items-center gap-2 p-4 ${isDark ? 'border-b border-white/10' : 'border-b border-slate-200'}`}>
                                                 <button onClick={() => {
                                                     const prevIdx = Math.max(currentStudentIdx - 1, 0);
                                                     setScoringSessionModal({ ...scoringSessionModal, selectedStudentId: enrolledStudents[prevIdx].studentId });
@@ -2482,9 +2511,11 @@ const AssessmentsManagement = ({ courses, registeredStudents }) => {
 
                                                 <select value={selectedStudentId}
                                                     onChange={e => setScoringSessionModal({ ...scoringSessionModal, selectedStudentId: e.target.value })}
-                                                    className="flex-1 bg-white/5 border border-white/10 rounded-lg text-sm text-white px-3 py-2 font-medium appearance-none cursor-pointer text-center">
+                                                    className={`flex-1 rounded-lg text-sm px-3 py-2 font-medium appearance-none cursor-pointer text-center ${
+                                                        isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-slate-300 text-slate-900'
+                                                    }`}>
                                                     {enrolledStudents.map((s, i) => (
-                                                        <option key={s.studentId} value={s.studentId} className="bg-[#1e1e2e] text-white">
+                                                        <option key={s.studentId} value={s.studentId} className={isDark ? 'bg-[#1e1e2e] text-white' : 'bg-white text-slate-900'}>
                                                             {i + 1}. {s.name} {activeSession.scores[s.studentId] !== undefined ? `(${activeSession.scores[s.studentId]}점)` : ''}
                                                         </option>
                                                     ))}
@@ -2586,8 +2617,10 @@ const AssessmentsManagement = ({ courses, registeredStudents }) => {
             {/* ═══ Edit Area Modal ═══ */}
             {editAreaModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setEditAreaModal(null)}>
-                    <div className="bg-[#1e1e2e] rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl border border-white/10 m-4" onClick={e => e.stopPropagation()}>
-                        <div className="p-6 border-b border-white/10">
+                    <div className={`rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl border m-4 ${
+                        isDark ? 'bg-[#1e1e2e] border-white/10' : 'bg-white border-slate-300'
+                    }`} onClick={e => e.stopPropagation()}>
+                        <div className={`p-6 ${isDark ? 'border-b border-white/10' : 'border-b border-slate-200'}`}>
                             <h4 className="text-lg font-bold text-white">영역 편집: {editAreaModal.name}</h4>
                         </div>
                         <div className="p-6 space-y-5">
@@ -2595,11 +2628,11 @@ const AssessmentsManagement = ({ courses, registeredStudents }) => {
                             <div className="flex gap-3">
                                 <div className="flex-1">
                                     <label className="text-xs text-gray-400 mb-1 block">영역 이름</label>
-                                    <input value={editAreaModal.name} onChange={e => { const name = e.target.value; setEditAreaModal({ ...editAreaModal, name }); updatePerformanceArea(selectedCourseId, editAreaModal.id, { name }); }} className="w-full bg-white/5 border border-white/10 rounded-lg text-sm text-white px-3 py-2" />
+                                    <input value={editAreaModal.name} onChange={e => { const name = e.target.value; setEditAreaModal({ ...editAreaModal, name }); updatePerformanceArea(selectedCourseId, editAreaModal.id, { name }); }} className={`w-full rounded-lg text-sm px-3 py-2 ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-slate-300 text-slate-900'}`} />
                                 </div>
                                 <div className="w-24">
                                     <label className="text-xs text-gray-400 mb-1 block">비율(%)</label>
-                                    <input type="number" value={editAreaModal.weight} onChange={e => { const weight = Number(e.target.value); setEditAreaModal({ ...editAreaModal, weight }); updatePerformanceArea(selectedCourseId, editAreaModal.id, { weight }); }} className="w-full bg-white/5 border border-white/10 rounded-lg text-sm text-white px-3 py-2 text-center" />
+                                    <input type="number" value={editAreaModal.weight} onChange={e => { const weight = Number(e.target.value); setEditAreaModal({ ...editAreaModal, weight }); updatePerformanceArea(selectedCourseId, editAreaModal.id, { weight }); }} className={`w-full rounded-lg text-sm px-3 py-2 text-center ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-slate-300 text-slate-900'}`} />
                                 </div>
                             </div>
 
@@ -2608,7 +2641,7 @@ const AssessmentsManagement = ({ courses, registeredStudents }) => {
                                 <label className="text-xs text-gray-400 mb-1 block">성취 기준</label>
                                 <textarea value={editField.achievementStandard} onChange={e => { setEditField({ ...editField, achievementStandard: e.target.value }); updatePerformanceArea(selectedCourseId, editAreaModal.id, { achievementStandard: e.target.value }); }}
                                     placeholder="예: [건해 01-02] 건축 제도에 사용되는 선과 글자를 제도 규칙 작성 방법에 맞게 쓸 수 있다."
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg text-sm text-white px-3 py-2 resize-none h-20" />
+                                    className={`w-full rounded-lg text-sm px-3 py-2 resize-none h-20 ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-slate-300 text-slate-900'}`} />
                             </div>
 
                             {/* 평가 요소 (체크리스트용 문항) */}
@@ -2616,7 +2649,7 @@ const AssessmentsManagement = ({ courses, registeredStudents }) => {
                                 <label className="text-xs text-gray-400 mb-2 block">평가 요소 <span className="text-gray-500">(체크리스트 채점 시 각 항목을 Y/N 체크)</span></label>
                                 <div className="space-y-1.5 mb-2">
                                     {(editAreaModal.assessmentElements || []).map((el, i) => (
-                                        <div key={i} className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-2 border border-white/10 group">
+                                        <div key={i} className={`flex items-center gap-2 rounded-lg px-3 py-2 border group ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
                                             <span className="text-xs text-purple-400 font-mono w-5 flex-shrink-0">▪</span>
                                             <span className="text-xs text-gray-200 flex-1">{el}</span>
                                             <button onClick={() => { const els = editAreaModal.assessmentElements.filter((_, idx) => idx !== i); setEditAreaModal({ ...editAreaModal, assessmentElements: els }); updatePerformanceArea(selectedCourseId, editAreaModal.id, { assessmentElements: els }); }} className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><span className="material-symbols-outlined text-sm">close</span></button>
@@ -2624,7 +2657,7 @@ const AssessmentsManagement = ({ courses, registeredStudents }) => {
                                     ))}
                                 </div>
                                 <div className="flex gap-2">
-                                    <input value={editField.newElement} onChange={e => setEditField({ ...editField, newElement: e.target.value })} placeholder="예: 도면의 중심을 작도하여 찾아낼 수 있는가?" className="flex-1 bg-white/5 border border-white/10 rounded-lg text-sm text-white px-3 py-1.5"
+                                    <input value={editField.newElement} onChange={e => setEditField({ ...editField, newElement: e.target.value })} placeholder="예: 도면의 중심을 작도하여 찾아낼 수 있는가?" className={`flex-1 rounded-lg text-sm px-3 py-1.5 ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-slate-300 text-slate-900'}`}
                                         onKeyDown={e => { if (e.key === 'Enter' && editField.newElement.trim()) { const els = [...(editAreaModal.assessmentElements || []), editField.newElement.trim()]; setEditAreaModal({ ...editAreaModal, assessmentElements: els }); updatePerformanceArea(selectedCourseId, editAreaModal.id, { assessmentElements: els }); setEditField({ ...editField, newElement: '' }); } }} />
                                     <button onClick={() => { if (!editField.newElement.trim()) return; const els = [...(editAreaModal.assessmentElements || []), editField.newElement.trim()]; setEditAreaModal({ ...editAreaModal, assessmentElements: els }); updatePerformanceArea(selectedCourseId, editAreaModal.id, { assessmentElements: els }); setEditField({ ...editField, newElement: '' }); }}
                                         className="px-3 py-1.5 bg-purple-500/20 text-purple-400 rounded-lg text-xs font-medium hover:bg-purple-500/30">추가</button>
@@ -2680,7 +2713,7 @@ const AssessmentsManagement = ({ courses, registeredStudents }) => {
                                                 <label className="text-[10px] text-gray-500 whitespace-nowrap">간격</label>
                                                 <input type="number" min="0.5" step="0.5" value={editAreaModal._scoreStep ?? 1}
                                                     onChange={e => setEditAreaModal({ ...editAreaModal, _scoreStep: Number(e.target.value) || 1 })}
-                                                    className="w-12 bg-white/5 border border-white/10 rounded text-[11px] text-white px-1.5 py-0.5 text-center" />
+                                                    className={`w-12 rounded text-[11px] px-1.5 py-0.5 text-center ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-slate-300 text-slate-900'}`} />
                                             </div>
                                             <button onClick={() => {
                                                 const count = (editAreaModal.assessmentElements || []).length;
@@ -2698,22 +2731,22 @@ const AssessmentsManagement = ({ courses, registeredStudents }) => {
                                 </div>
                                 <div className="space-y-2">
                                     {(editAreaModal.scoringLevels || []).map(lv => (
-                                        <div key={lv.id} className="flex items-center gap-2 bg-white/5 rounded-lg p-2.5 border border-white/10">
+                                        <div key={lv.id} className={`flex items-center gap-2 rounded-lg p-2.5 border ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
                                             <input value={lv.label} onChange={e => {
                                                 const levels = editAreaModal.scoringLevels.map(l => l.id === lv.id ? { ...l, label: e.target.value } : l);
                                                 setEditAreaModal({ ...editAreaModal, scoringLevels: levels });
                                                 updatePerformanceArea(selectedCourseId, editAreaModal.id, { scoringLevels: levels });
-                                            }} className="w-20 bg-white/10 border-none rounded text-xs text-white px-2 py-1 text-center font-bold" />
+                                            }} className={`w-20 rounded text-xs px-2 py-1 text-center font-bold ${isDark ? 'bg-white/10 border-none text-white' : 'bg-white border border-slate-300 text-slate-900'}`} />
                                             <input value={lv.description} onChange={e => {
                                                 const levels = editAreaModal.scoringLevels.map(l => l.id === lv.id ? { ...l, description: e.target.value } : l);
                                                 setEditAreaModal({ ...editAreaModal, scoringLevels: levels });
                                                 updatePerformanceArea(selectedCourseId, editAreaModal.id, { scoringLevels: levels });
-                                            }} className="flex-1 bg-white/5 border border-white/10 rounded text-xs text-white px-2 py-1" placeholder="설명" />
+                                            }} className={`flex-1 rounded text-xs px-2 py-1 ${isDark ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-slate-300 text-slate-900'}`} placeholder="설명" />
                                             <input type="number" value={lv.score} onChange={e => {
                                                 const levels = editAreaModal.scoringLevels.map(l => l.id === lv.id ? { ...l, score: Number(e.target.value) } : l);
                                                 setEditAreaModal({ ...editAreaModal, scoringLevels: levels });
                                                 updatePerformanceArea(selectedCourseId, editAreaModal.id, { scoringLevels: levels });
-                                            }} className="w-16 bg-white/10 border-none rounded text-xs text-white px-2 py-1 text-center" />
+                                            }} className={`w-16 rounded text-xs px-2 py-1 text-center ${isDark ? 'bg-white/10 border-none text-white' : 'bg-white border border-slate-300 text-slate-900'}`} />
                                             <span className="text-xs text-gray-500">점</span>
                                             <button onClick={() => {
                                                 const levels = editAreaModal.scoringLevels.filter(l => l.id !== lv.id);
@@ -2733,7 +2766,7 @@ const AssessmentsManagement = ({ courses, registeredStudents }) => {
                                 </button>
                             </div>
                         </div>
-                        <div className="p-4 border-t border-white/10 flex justify-end">
+                        <div className={`p-4 flex justify-end ${isDark ? 'border-t border-white/10' : 'border-t border-slate-200'}`}>
                             <button onClick={() => setEditAreaModal(null)} className="px-6 py-2.5 bg-admin-primary text-white rounded-xl font-medium hover:bg-admin-primary/80">닫기</button>
                         </div>
                     </div>
@@ -2749,6 +2782,7 @@ const AssessmentsManagement = ({ courses, registeredStudents }) => {
 function MarketplaceManagement() {
     const { shopItems, purchases, addShopItem, removeShopItem, updateShopItems, deliverPurchase } = useMarketplaceStore();
     const { registeredStudents } = useAuthStore();
+    const isDark = useThemeStore(state => state.isDark);
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [activeSubTab, setActiveSubTab] = useState('items');
@@ -2826,10 +2860,12 @@ function MarketplaceManagement() {
                     </div>
 
                     {/* Items Table */}
-                    <div className="bg-admin-card-dark rounded-xl border border-white/5 overflow-hidden">
+                    <div className={`rounded-xl border overflow-hidden ${
+                        isDark ? 'bg-admin-card-dark border-white/5' : 'bg-white border-slate-300'
+                    }`}>
                         <table className="w-full">
                             <thead>
-                                <tr className="border-b border-white/5">
+                                <tr className={isDark ? 'border-b border-white/5' : 'border-b border-slate-200 bg-slate-100'}>
                                     <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider">상품</th>
                                     <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wider">카테고리</th>
                                     <th className="text-center px-5 py-3 text-xs text-gray-500 uppercase tracking-wider">가격 (⭐)</th>
@@ -2837,14 +2873,14 @@ function MarketplaceManagement() {
                                     <th className="text-right px-5 py-3 text-xs text-gray-500 uppercase tracking-wider">관리</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-white/5">
+                            <tbody className={isDark ? 'divide-y divide-white/5' : 'divide-y divide-slate-200'}>
                                 {shopItems.map(item => (
-                                    <tr key={item.id} className="hover:bg-white/5 transition-colors">
+                                    <tr key={item.id} className={`transition-colors ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}>
                                         <td className="px-5 py-3">
                                             <div className="flex items-center gap-3">
                                                 <span className="text-2xl">{item.icon}</span>
                                                 <div>
-                                                    <p className="text-white text-sm font-medium">{item.name}</p>
+                                                    <p className={`text-sm font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{item.name}</p>
                                                     <p className="text-gray-500 text-xs">{item.description}</p>
                                                 </div>
                                             </div>
@@ -2898,17 +2934,23 @@ function MarketplaceManagement() {
                             대기 중인 주문 ({pendingPurchases.length})
                         </h3>
                         {pendingPurchases.length === 0 ? (
-                            <div className="bg-admin-card-dark rounded-xl p-8 text-center text-gray-500 border border-white/5">
+                            <div className={`rounded-xl p-8 text-center text-gray-500 border ${
+                                isDark ? 'bg-admin-card-dark border-white/5' : 'bg-white border-slate-300'
+                            }`}>
                                 대기 중인 주문이 없습니다.
                             </div>
                         ) : (
-                            <div className="bg-admin-card-dark rounded-xl border border-white/5 divide-y divide-white/5">
+                            <div className={`rounded-xl border ${
+                                isDark ? 'bg-admin-card-dark border-white/5 divide-y divide-white/5' : 'bg-white border-slate-300 divide-y divide-slate-200'
+                            }`}>
                                 {purchases.map((purchase, idx) => purchase.status === 'pending' && (
-                                    <div key={idx} className="flex items-center justify-between px-5 py-3 hover:bg-white/5 transition-colors">
+                                    <div key={idx} className={`flex items-center justify-between px-5 py-3 transition-colors ${
+                                        isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'
+                                    }`}>
                                         <div className="flex items-center gap-3">
                                             <span className="text-2xl">{purchase.itemIcon}</span>
                                             <div>
-                                                <p className="text-white text-sm font-medium">{purchase.itemName}</p>
+                                                <p className={`text-sm font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{purchase.itemName}</p>
                                                 <p className="text-gray-500 text-xs">
                                                     {getStudentName(purchase)} ({purchase.studentId}) · {new Date(purchase.timestamp).toLocaleString('ko-KR')}
                                                 </p>
@@ -2935,17 +2977,21 @@ function MarketplaceManagement() {
                             완료된 주문 ({deliveredPurchases.length})
                         </h3>
                         {deliveredPurchases.length === 0 ? (
-                            <div className="bg-admin-card-dark rounded-xl p-8 text-center text-gray-500 border border-white/5">
+                            <div className={`rounded-xl p-8 text-center text-gray-500 border ${
+                                isDark ? 'bg-admin-card-dark border-white/5' : 'bg-white border-slate-300'
+                            }`}>
                                 완료된 주문이 없습니다.
                             </div>
                         ) : (
-                            <div className="bg-admin-card-dark rounded-xl border border-white/5 divide-y divide-white/5 max-h-80 overflow-y-auto">
+                            <div className={`rounded-xl border max-h-80 overflow-y-auto ${
+                                isDark ? 'bg-admin-card-dark border-white/5 divide-y divide-white/5' : 'bg-white border-slate-300 divide-y divide-slate-200'
+                            }`}>
                                 {purchases.map((purchase, idx) => purchase.status === 'delivered' && (
                                     <div key={idx} className="flex items-center justify-between px-5 py-3 opacity-60">
                                         <div className="flex items-center gap-3">
                                             <span className="text-2xl">{purchase.itemIcon}</span>
                                             <div>
-                                                <p className="text-white text-sm font-medium">{purchase.itemName}</p>
+                                                <p className={`text-sm font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{purchase.itemName}</p>
                                                 <p className="text-gray-500 text-xs">
                                                     {getStudentName(purchase)} ({purchase.studentId}) · {new Date(purchase.timestamp).toLocaleString('ko-KR')}
                                                 </p>
@@ -3551,18 +3597,6 @@ const SettingsManagement = () => {
                             </button>
                         </div>
 
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-background-dark border border-white/5 opacity-60 cursor-not-allowed">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center">
-                                    <span className="material-symbols-outlined">notifications</span>
-                                </div>
-                                <div>
-                                    <h5 className="text-white text-sm font-medium">Notifications</h5>
-                                    <p className="text-gray-500 text-xs">Email triggers and push alerts</p>
-                                </div>
-                            </div>
-                            <div className="px-2 py-1 bg-white/10 rounded text-[10px] font-bold text-gray-400 uppercase tracking-wider">Coming Soon</div>
-                        </div>
                     </div>
                 </div>
 

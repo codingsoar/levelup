@@ -181,10 +181,28 @@ body {
   color: #66788c !important;
 }
 
-.admin-theme-light .border-white\/5,
-.admin-theme-light .border-white\/10,
+.admin-theme-light .border-white\/5 {
+  border-color: rgba(19, 32, 51, 0.12) !important;
+}
+
+.admin-theme-light .border-white\/10 {
+  border-color: rgba(19, 32, 51, 0.16) !important;
+}
+
 .admin-theme-light .border-white\/20 {
-  border-color: rgba(19, 32, 51, 0.1) !important;
+  border-color: rgba(19, 32, 51, 0.22) !important;
+}
+
+.admin-theme-light .divide-white\/5 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(19, 32, 51, 0.12) !important;
+}
+
+.admin-theme-light .divide-white\/10 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(19, 32, 51, 0.16) !important;
+}
+
+.admin-theme-light .divide-white\/20 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(19, 32, 51, 0.22) !important;
 }
 
 .admin-theme-light .shadow-xl,
