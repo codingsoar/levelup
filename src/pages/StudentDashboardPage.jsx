@@ -12,7 +12,7 @@ export default function StudentDashboardPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout, registeredStudents } = useAuthStore();
-    const { getStudentProgress, totalStars, getStudentReflections } = useProgressStore();
+    const { getStudentProgress, totalStars, getStudentReflections, fetchProgress } = useProgressStore();
     const { courses } = useStageStore();
     const isDark = useThemeStore(state => state.isDark);
     const assignedCourseIds = useMemo(
@@ -55,6 +55,13 @@ export default function StudentDashboardPage() {
 
         return Math.round((completedStages / selectedCourse.stages.length) * 100);
     };
+
+    // Load progress from server when dashboard mounts
+    useEffect(() => {
+        if (user?.studentId) {
+            fetchProgress(user.studentId);
+        }
+    }, [user?.studentId, fetchProgress]);
 
     const handleLogout = () => {
         logout();

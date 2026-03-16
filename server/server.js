@@ -5,6 +5,18 @@ const db = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const formatReflectionRow = (row) => ({
+    studentId: row.student_id,
+    courseId: row.course_id,
+    stageId: row.stage_id,
+    difficulty: row.difficulty,
+    reflection: row.content,
+    missionTitle: row.mission_title || '',
+    courseTitle: row.course_title || '',
+    stageTitle: row.stage_title || '',
+    timestamp: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+});
+
 // 미들웨어
 app.use(cors()); // 프론트와 통신 허용
 app.use(express.json()); // JSON 바디 파싱
@@ -99,7 +111,7 @@ app.get('/api/progress/:studentId', (req, res) => {
                 res.json({
                     progress: progressGraph,
                     totalStars: stats ? stats.total_stars : 0,
-                    reflections: reflections || []
+                    reflections: (reflections || []).map(formatReflectionRow)
                 });
             });
         });
@@ -129,9 +141,27 @@ app.post('/api/progress/complete', (req, res) => {
         // 3. Reflection이 존재하면 추가
         if (reflectionEntry) {
             db.run(`
-                INSERT INTO reflections (student_id, course_id, stage_id, difficulty, content)
-                VALUES (?, ?, ?, ?, ?)
-            `, [studentId, courseId, stageId, difficulty, reflectionEntry.reflection]);
+                INSERT INTO reflections (
+                    student_id,
+                    course_id,
+                    stage_id,
+                    difficulty,
+                    content,
+                    mission_title,
+                    course_title,
+                    stage_title
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                studentId,
+                courseId,
+                stageId,
+                difficulty,
+                reflectionEntry.reflection,
+                reflectionEntry.missionTitle || '',
+                reflectionEntry.courseTitle || '',
+                reflectionEntry.stageTitle || '',
+            ]);
         }
     });
 
@@ -139,7 +169,56 @@ app.post('/api/progress/complete', (req, res) => {
 });
 
 
+// ==========================================
+// 3. 관리자(Admin) 전용 API
+// ==========================================
+
+// 모든 학생 목록 및 각각의 진도 통합 조회
+app.get('/api/admin/dashboard', (req, res) => {
+    // 1. 모든 학생 유저 조회
+    db.all(`SELECT id, name FROM users WHERE role = 'student'`, [], (err, students) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        // 2. 모든 통계(별) 조회
+        db.all(`SELECT student_id, total_stars FROM student_stats`, [], (err2, statsRaw) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            const statsMap = {};
+            statsRaw.forEach(row => { statsMap[row.student_id] = row.total_stars; });
+            
+            // 3. 모든 진도 조회
+            db.all(`SELECT * FROM progress`, [], (err3, progressRows) => {
+                if (err3) return res.status(500).json({ error: err3.message });
+                
+                const progressGraph = {};
+                progressRows.forEach(row => {
+                    const sid = row.student_id;
+                    if (!progressGraph[sid]) progressGraph[sid] = {};
+                    if (!progressGraph[sid][row.course_id]) progressGraph[sid][row.course_id] = {};
+                    if (!progressGraph[sid][row.course_id][row.stage_id]) progressGraph[sid][row.course_id][row.stage_id] = {};
+                    progressGraph[sid][row.course_id][row.stage_id][row.difficulty] = row.completed === 1;
+                });
+
+                // 4. 모든 성찰 조회
+                db.all(`SELECT * FROM reflections ORDER BY created_at DESC`, [], (err4, reflections) => {
+                    if (err4) return res.status(500).json({ error: err4.message });
+
+                    res.json({
+                        success: true,
+                        students: students.map(s => ({
+                            studentId: s.id,
+                            name: s.name,
+                            totalStars: statsMap[s.id] || 0,
+                            progress: progressGraph[s.id] || {},
+                        })),
+                        allReflections: reflections.map(formatReflectionRow)
+                    });
+                });
+            });
+        });
+    });
+});
+
 // 서버 시작
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(\`Server is running on port \${PORT}\`);
+    console.log(`Server is running on port ${PORT}`);
 });

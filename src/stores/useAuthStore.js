@@ -57,6 +57,32 @@ const applySubAdminLogin = (set, subAdmin) => {
     });
 };
 
+const mergeStudents = (currentStudents, incomingStudents) => {
+    const currentById = new Map(currentStudents.map(student => [student.studentId, normalizeStudent(student)]));
+    const merged = [];
+
+    incomingStudents.forEach(student => {
+        const normalizedIncoming = normalizeStudent(student);
+        const existing = currentById.get(normalizedIncoming.studentId);
+        merged.push(
+            normalizeStudent({
+                ...existing,
+                ...normalizedIncoming,
+                password: normalizedIncoming.password || existing?.password || '1234',
+                courseIds: normalizedIncoming.courseIds?.length ? normalizedIncoming.courseIds : (existing?.courseIds || []),
+                completedMissions: normalizedIncoming.completedMissions?.length
+                    ? normalizedIncoming.completedMissions
+                    : (existing?.completedMissions || []),
+                grade: normalizedIncoming.grade || existing?.grade || 1,
+                admissionYear: normalizedIncoming.admissionYear || existing?.admissionYear || new Date().getFullYear(),
+            })
+        );
+        currentById.delete(normalizedIncoming.studentId);
+    });
+
+    return [...merged, ...Array.from(currentById.values())].map(normalizeStudent);
+};
+
 export const useAuthStore = create(
     persist(
         (set, get) => ({
@@ -133,9 +159,9 @@ export const useAuthStore = create(
 
             logout: () => set({ user: null, isAdmin: false }),
 
-            setAllStudents: (students) => set({
-                registeredStudents: students.map(normalizeStudent)
-            }),
+            setAllStudents: (students) => set(state => ({
+                registeredStudents: mergeStudents(state.registeredStudents, students)
+            })),
 
             changeAdminPassword: (currentPassword, newPassword) => {
                 const adminCredentials = get().adminCredentials || DEFAULT_ADMIN_CREDENTIALS;

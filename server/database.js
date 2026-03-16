@@ -12,6 +12,23 @@ const db = new sqlite3.Database(dbPath, (err) => {
     }
 });
 
+function ensureColumn(tableName, columnName, definition) {
+    db.all(`PRAGMA table_info(${tableName})`, (err, columns) => {
+        if (err) {
+            console.error(`Error reading ${tableName} schema:`, err.message);
+            return;
+        }
+
+        if (!columns.some(column => column.name === columnName)) {
+            db.run(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`, (alterErr) => {
+                if (alterErr) {
+                    console.error(`Error adding ${columnName} to ${tableName}:`, alterErr.message);
+                }
+            });
+        }
+    });
+}
+
 function initializeDatabase() {
     db.serialize(() => {
         // 1. 사용자(학생/관리자) 테이블
@@ -60,6 +77,9 @@ function initializeDatabase() {
                 stage_id TEXT NOT NULL,
                 difficulty TEXT NOT NULL,
                 content TEXT NOT NULL,
+                mission_title TEXT,
+                course_title TEXT,
+                stage_title TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         `);
@@ -81,6 +101,10 @@ function initializeDatabase() {
             `,
             ['admin', 'admin1234', '관리자', 'admin']
         );
+
+        ensureColumn('reflections', 'mission_title', 'TEXT');
+        ensureColumn('reflections', 'course_title', 'TEXT');
+        ensureColumn('reflections', 'stage_title', 'TEXT');
 
         console.log('Database tables initialized.');
     });

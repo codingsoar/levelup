@@ -1288,3 +1288,40 @@ Copy this block for every new entry:
 ### Notes
 - There were already unrelated in-progress edits in several files, including `src/stores/useAuthStore.js` and `src/pages/StudentLoginPage.jsx`; the fix was limited to the login path.
 - Changes were not committed or pushed in this task.
+
+## 2026-03-16 - Resume Interrupted Server Sync Work
+
+### Request
+- Recover the interrupted Antigravity work and finish it safely.
+
+### Scope
+- Frontend/server progress sync, admin dashboard server data loading, local API proxying, and deployment helper files.
+- Excluded committing the generated SQLite database file.
+
+### Implemented
+- Completed the in-progress server sync path across `useProgressStore`, `StudentDashboardPage`, `AdminPage`, `server/server.js`, and `vite.config.js`.
+- Changed auth-store student syncing to merge server data with existing local metadata instead of overwriting it.
+- Normalized reflection payloads and persisted reflection titles in SQLite so admin/student reflection UIs keep working after reloads.
+- Kept local mission completion working as a fallback when the backend is unavailable.
+- Added `server/database.sqlite` to `.gitignore` and kept the deployment helper files `server/ecosystem.config.js` and `server/nginx.conf.example` as part of the workspace.
+
+### Validation
+- `npx eslint src\stores\useAuthStore.js src\stores\useProgressStore.js src\pages\AdminPage.jsx src\pages\StudentDashboardPage.jsx src\pages\AdminLoginPage.jsx src\pages\StudentLoginPage.jsx vite.config.js` -> Success
+- `npm run build` -> Success
+
+### Files
+- `.gitignore`
+- `server/database.js`
+- `server/server.js`
+- `server/ecosystem.config.js`
+- `server/nginx.conf.example`
+- `src/stores/useAuthStore.js`
+- `src/stores/useProgressStore.js`
+- `src/pages/AdminPage.jsx`
+- `src/pages/StudentDashboardPage.jsx`
+- `vite.config.js`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- The generated local database file `server/database.sqlite` is intentionally ignored and was not prepared for commit.
+- A one-off Node validation script closed SQLite before async schema checks finished; runtime server usage is unaffected because the server process keeps the DB open.

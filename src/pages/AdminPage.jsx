@@ -4046,10 +4046,10 @@ const SubAdminManagement = ({ subAdmins, courses, onAddSubAdmin, onRemoveSubAdmi
 export default function AdminPage() {
     const navigate = useNavigate();
     const isDark = useThemeStore(state => state.isDark);
-    const { user, logout, registeredStudents, registerStudent, removeStudent, bulkRegisterStudents, updateStudent, subAdmins, addSubAdmin, removeSubAdmin, updateSubAdmin } = useAuthStore();
+    const { user, logout, registeredStudents, registerStudent, removeStudent, bulkRegisterStudents, updateStudent, subAdmins, addSubAdmin, removeSubAdmin, updateSubAdmin, setAllStudents } = useAuthStore();
     const sessionScores = useAssessmentStore(state => state.sessionScores);
     const { courses, addCourse, deleteCourse } = useStageStore();
-    const { submissions: _submissions, totalStars, progress, reflections = [] } = useProgressStore();
+    const { submissions: _submissions, totalStars, progress, reflections = [], setAllProgressData } = useProgressStore();
     const isSubAdmin = user?.role === 'subadmin';
     const [currentView, setCurrentView] = useState('dashboard');
     const [selectedProgressCourseId, setSelectedProgressCourseId] = useState('');
@@ -4086,6 +4086,35 @@ export default function AdminPage() {
             setCurrentView(visibleAdminViews[0]?.id || 'dashboard');
         }
     }, [currentView, visibleAdminViews]);
+
+    // 서버에서 모든 학생 데이터 갱신
+    useEffect(() => {
+        const fetchAdminDashboard = async () => {
+             // 차후에 Zustand Store 내부 액션으로 이동하는 편이 좋지만 우선 여기서 처리
+             try {
+                const rs = await fetch('/api/admin/dashboard');
+                const data = await rs.json();
+                if(data.success && data.students) {
+                    console.log("[Admin] Server data loaded: ", data.students);
+                    
+                    setAllStudents(data.students);
+
+                    // Reconstruct maps for progress store
+                    const totalStarsMap = {};
+                    const progressGraph = {};
+                    data.students.forEach(s => {
+                        totalStarsMap[s.studentId] = s.totalStars || 0;
+                        progressGraph[s.studentId] = s.progress || {};
+                    });
+
+                    setAllProgressData(progressGraph, totalStarsMap, data.allReflections || []);
+                }
+             } catch(e) {
+                 console.error("Failed to load admin dashboard data from server", e);
+             }
+        };
+        fetchAdminDashboard();
+    }, [setAllStudents, setAllProgressData]);
 
     const openCourseProgressView = (courseId) => {
         setSelectedProgressCourseId(courseId);
