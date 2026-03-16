@@ -1325,3 +1325,28 @@ Copy this block for every new entry:
 ### Notes
 - The generated local database file `server/database.sqlite` is intentionally ignored and was not prepared for commit.
 - A one-off Node validation script closed SQLite before async schema checks finished; runtime server usage is unaffected because the server process keeps the DB open.
+
+## 2026-03-16 - Push Current Main To LevelUp
+
+### Request
+- Push the current repository state to `https://github.com/codingsoar/levelup.git`.
+- Summarize the Ubuntu deployment procedure.
+
+### Scope
+- Repository sync to an additional GitHub remote and deployment handoff notes.
+- No product code changes.
+
+### Implemented
+- Verified the current `main` branch state before sync.
+- Prepared the current branch for push to the LevelUp repository.
+- Documented the deployment handoff request for future sessions.
+
+### Validation
+- `git status --short --branch` -> Success
+- `git ls-remote https://github.com/codingsoar/levelup.git` -> Success
+
+### Files
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Push target for this task is `codingsoar/levelup` rather than the existing origin remote.
