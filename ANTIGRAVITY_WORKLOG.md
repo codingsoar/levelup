@@ -1204,3 +1204,31 @@ Copy this block for every new entry:
 
 ### Notes
 - The reported issue was caused by `bg-[#1e1e2e]` and dark-only input styles inside assessments modals.
+
+## 2026-03-16 - Push Workspace To StarQuest
+
+### Request
+- Push the current workspace to `https://github.com/codingsoar/starquest.git`.
+
+### Scope
+- Repository sync and current untracked backend files only.
+- No frontend behavior changes beyond including the existing `server/` workspace.
+
+### Implemented
+- Reviewed the shared worklog and current git state before syncing.
+- Added the current `server/` backend files to version control.
+- Prepared the repository for push to the StarQuest remote.
+
+### Validation
+- `git status --short --branch` -> Success
+- `git remote -v` -> Success
+
+### Files
+- `server/database.js`
+- `server/package.json`
+- `server/package-lock.json`
+- `server/server.js`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- `server/node_modules` remained untracked because the repo-level `node_modules` ignore rule already covers nested dependency folders.
