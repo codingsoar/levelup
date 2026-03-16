@@ -211,6 +211,28 @@ body {
   box-shadow: 0 18px 44px rgba(74, 85, 104, 0.12) !important;
 }
 
+.admin-theme-light input,
+.admin-theme-light textarea,
+.admin-theme-light select {
+  background-color: #ffffff !important;
+  color: #132033 !important;
+  border-color: rgba(19, 32, 51, 0.16) !important;
+}
+
+.admin-theme-light input::placeholder,
+.admin-theme-light textarea::placeholder {
+  color: #7b8794 !important;
+}
+
+.admin-theme-light option {
+  background-color: #ffffff !important;
+  color: #132033 !important;
+}
+
+.admin-theme-light .ring-offset-gray-900 {
+  --tw-ring-offset-color: #ffffff !important;
+}
+
 /* ── 유틸리티 ── */
 .star-glow {
   filter: drop-shadow(0 0 6px rgba(246, 173, 85, 0.6));

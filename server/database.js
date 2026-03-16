@@ -41,6 +41,8 @@ function initializeDatabase() {
                 role TEXT DEFAULT 'student',
                 courseIds TEXT,     -- JSON string (for subadmins)
                 permissions TEXT,   -- JSON string (for subadmins)
+                grade INTEGER,
+                admission_year INTEGER,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         `);
@@ -105,6 +107,8 @@ function initializeDatabase() {
         ensureColumn('reflections', 'mission_title', 'TEXT');
         ensureColumn('reflections', 'course_title', 'TEXT');
         ensureColumn('reflections', 'stage_title', 'TEXT');
+        ensureColumn('users', 'grade', 'INTEGER');
+        ensureColumn('users', 'admission_year', 'INTEGER');
 
         console.log('Database tables initialized.');
     });

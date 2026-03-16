@@ -1350,3 +1350,34 @@ Copy this block for every new entry:
 
 ### Notes
 - Push target for this task is `codingsoar/levelup` rather than the existing origin remote.
+
+## 2026-03-16 - Block Auto-Creation Of Student Accounts
+
+### Request
+- Prevent arbitrary student IDs from being auto-created at the student login screen.
+- Require students to be added by an admin before they can log in.
+
+### Scope
+- Server auth/student management APIs and frontend auth-store student sync.
+- No UI redesign beyond preserving the existing login flow.
+
+### Implemented
+- Removed the server-side fallback that auto-created missing student accounts during `/api/auth/login`.
+- Added server-side student upsert/delete APIs so admin-created students are persisted to SQLite.
+- Added user schema fields for student `grade` and `admission_year`, plus migrations for older DBs.
+- Updated frontend student-related auth-store actions to sync create/update/delete/password/course changes to the server.
+- Changed login fallback behavior so rejected server auth no longer silently falls back to local data unless the request itself fails.
+
+### Validation
+- `node --check server/server.js` -> Success
+- `node --check server/database.js` -> Success
+- `npm run build` -> Success
+
+### Files
+- `server/database.js`
+- `server/server.js`
+- `src/stores/useAuthStore.js`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- The server lint command reported `no-undef` for Node globals because the repo ESLint config targets browser code; Node syntax validation was used for backend files instead.

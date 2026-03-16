@@ -57,6 +57,35 @@ const applySubAdminLogin = (set, subAdmin) => {
     });
 };
 
+const syncStudentToServer = async (student) => {
+    try {
+        await fetch('/api/admin/students/upsert', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                studentId: student.studentId,
+                name: student.name,
+                password: student.password,
+                courseIds: student.courseIds || [],
+                grade: student.grade,
+                admissionYear: student.admissionYear,
+            }),
+        });
+    } catch (error) {
+        console.error('Failed to sync student to server:', error);
+    }
+};
+
+const deleteStudentFromServer = async (studentId) => {
+    try {
+        await fetch(`/api/admin/students/${encodeURIComponent(studentId)}`, {
+            method: 'DELETE',
+        });
+    } catch (error) {
+        console.error('Failed to delete student from server:', error);
+    }
+};
+
 const mergeStudents = (currentStudents, incomingStudents) => {
     const currentById = new Map(currentStudents.map(student => [student.studentId, normalizeStudent(student)]));
     const merged = [];
@@ -105,6 +134,7 @@ export const useAuthStore = create(
                         applyStudentLogin(set, data.user);
                         return true;
                     }
+                    return false;
                 } catch (error) {
                     console.error('Login error:', error);
                 }
@@ -138,6 +168,7 @@ export const useAuthStore = create(
                             return true;
                         }
                     }
+                    return false;
                 } catch (error) {
                     console.error('Admin login error:', error);
                 }
@@ -207,6 +238,14 @@ export const useAuthStore = create(
                         admissionYear: normalizedYear
                     }]
                 }));
+                syncStudentToServer({
+                    studentId: normalizedStudentId,
+                    name: normalizedName,
+                    password: normalizedPassword,
+                    courseIds: [],
+                    grade: normalizedGrade,
+                    admissionYear: normalizedYear,
+                });
                 return { ok: true };
             },
 
@@ -218,6 +257,10 @@ export const useAuthStore = create(
                             : s
                     )
                 }));
+                const updatedStudent = get().registeredStudents.find(student => student.studentId === studentId);
+                if (updatedStudent) {
+                    syncStudentToServer(normalizeStudent(updatedStudent));
+                }
             },
 
             unenrollStudent: (studentId, courseId) => {
@@ -228,6 +271,10 @@ export const useAuthStore = create(
                             : s
                     )
                 }));
+                const updatedStudent = get().registeredStudents.find(student => student.studentId === studentId);
+                if (updatedStudent) {
+                    syncStudentToServer(normalizeStudent(updatedStudent));
+                }
             },
 
             // Bulk registration
@@ -262,6 +309,9 @@ export const useAuthStore = create(
                     set(state => ({
                         registeredStudents: [...state.registeredStudents, ...newStudents]
                     }));
+                    newStudents.forEach(student => {
+                        syncStudentToServer(normalizeStudent(student));
+                    });
                 }
 
                 return { addedCount: newStudents.length, errors };
@@ -273,6 +323,10 @@ export const useAuthStore = create(
                         s.studentId === studentId ? { ...s, ...updates } : s
                     )
                 }));
+                const updatedStudent = get().registeredStudents.find(student => student.studentId === studentId);
+                if (updatedStudent) {
+                    syncStudentToServer(normalizeStudent(updatedStudent));
+                }
             },
 
             addStudentToCourse: (courseId, studentId, name, password) => {
@@ -317,6 +371,11 @@ export const useAuthStore = create(
                     };
                 });
 
+                const updatedStudent = get().registeredStudents.find(student => student.studentId === normalizedStudentId);
+                if (updatedStudent) {
+                    syncStudentToServer(normalizeStudent(updatedStudent));
+                }
+
                 return { ok: true };
             },
 
@@ -332,6 +391,12 @@ export const useAuthStore = create(
                         )
                         .filter(student => student.courseIds.length > 0),
                 }));
+                const updatedStudent = get().registeredStudents.find(student => student.studentId === studentId);
+                if (updatedStudent) {
+                    syncStudentToServer(normalizeStudent(updatedStudent));
+                } else {
+                    deleteStudentFromServer(studentId);
+                }
             },
 
             getStudentsByCourse: (courseId) => {
@@ -347,6 +412,10 @@ export const useAuthStore = create(
                             s.studentId === studentId ? { ...s, password: newPassword } : s
                         ),
                     });
+                    const updatedStudent = get().registeredStudents.find(student => student.studentId === studentId);
+                    if (updatedStudent) {
+                        syncStudentToServer(normalizeStudent(updatedStudent));
+                    }
                     return true;
                 }
                 return false;
@@ -356,6 +425,7 @@ export const useAuthStore = create(
                 set(state => ({
                     registeredStudents: state.registeredStudents.filter(s => s.studentId !== studentId)
                 }));
+                deleteStudentFromServer(studentId);
             },
 
             // ═══════════════════════════════════════

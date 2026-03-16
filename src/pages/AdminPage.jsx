@@ -3073,7 +3073,7 @@ function MarketplaceManagement() {
                                     <select
                                         value={newItem.category}
                                         onChange={e => setNewItem({ ...newItem, category: e.target.value })}
-                                        className="w-full bg-[#1e1e2e] border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
+                                        className={`w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary ${isDark ? 'bg-[#1e1e2e] border border-white/10 text-white' : 'bg-white border border-slate-300 text-slate-900'}`}
                                     >
                                         <option value="snack" className="bg-[#1e1e2e] text-white">🍪 간식/음료</option>
                                         <option value="school" className="bg-[#1e1e2e] text-white">🏫 학교생활</option>
@@ -3180,7 +3180,7 @@ function MarketplaceManagement() {
                                     <select
                                         value={editingItem.category}
                                         onChange={e => setEditingItem({ ...editingItem, category: e.target.value })}
-                                        className="w-full bg-[#1e1e2e] border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
+                                        className={`w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary ${isDark ? 'bg-[#1e1e2e] border border-white/10 text-white' : 'bg-white border border-slate-300 text-slate-900'}`}
                                     >
                                         <option value="snack" className="bg-[#1e1e2e] text-white">🍪 간식/음료</option>
                                         <option value="school" className="bg-[#1e1e2e] text-white">🏫 학교생활</option>
@@ -4324,7 +4324,7 @@ export default function AdminPage() {
                                     <select
                                         value={notifTarget}
                                         onChange={e => setNotifTarget(e.target.value)}
-                                        className="w-full bg-[#1e1e2e] border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
+                                        className={`w-full rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary ${isDark ? 'bg-[#1e1e2e] border border-white/10 text-white' : 'bg-white border border-slate-300 text-slate-900'}`}
                                     >
                                         <option value="all" className="bg-[#1e1e2e] text-white">📢 전체 학생</option>
                                         {courses.map(c => (
@@ -4341,7 +4341,7 @@ export default function AdminPage() {
                                     <input
                                         value={notifTitle}
                                         onChange={e => setNotifTitle(e.target.value)}
-                                        className="w-full bg-[#1e1e2e] border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary"
+                                        className={`w-full rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary ${isDark ? 'bg-[#1e1e2e] border border-white/10 text-white' : 'bg-white border border-slate-300 text-slate-900'}`}
                                         placeholder="알림 제목"
                                     />
                                 </div>
@@ -4351,7 +4351,7 @@ export default function AdminPage() {
                                     <textarea
                                         value={notifMessage}
                                         onChange={e => setNotifMessage(e.target.value)}
-                                        className="w-full bg-[#1e1e2e] border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary resize-none h-24"
+                                        className={`w-full rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-admin-secondary resize-none h-24 ${isDark ? 'bg-[#1e1e2e] border border-white/10 text-white' : 'bg-white border border-slate-300 text-slate-900'}`}
                                         placeholder="학생에게 보낼 메시지를 입력하세요..."
                                     />
                                 </div>
@@ -4379,7 +4379,7 @@ export default function AdminPage() {
                                 )}
                                 <div className="space-y-2">
                                     {notifications.map(n => (
-                                        <div key={n.id} className="bg-[#1e1e2e] rounded-xl p-3 border border-white/5 group">
+                                        <div key={n.id} className={`rounded-xl p-3 border group ${isDark ? 'bg-[#1e1e2e] border-white/5' : 'bg-white border-slate-200'}`}>
                                             <div className="flex items-start justify-between gap-2">
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-1.5 mb-1">
