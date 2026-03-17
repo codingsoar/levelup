@@ -7,7 +7,7 @@ import useThemeStore from '../stores/useThemeStore';
 export default function StudentLayout({ children, activeTab: propActiveTab }) {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user } = useAuthStore();
+    const { user, logout } = useAuthStore();
     const { courses } = useStageStore();
     const isDark = useThemeStore(state => state.isDark);
 
@@ -98,7 +98,10 @@ export default function StudentLayout({ children, activeTab: propActiveTab }) {
                     </button>
                     {/* Logout Button */}
                     <button
-                        onClick={() => navigate('/')}
+                        onClick={() => {
+                            logout();
+                            navigate('/');
+                        }}
                         className={`mt-2 flex items-center gap-4 px-4 py-3 rounded-xl transition-all group w-full text-left text-slate-500 hover:bg-red-50 hover:text-red-600`}
                     >
                         <span className="material-symbols-outlined group-hover:rotate-180 transition-transform">logout</span>

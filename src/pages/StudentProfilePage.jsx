@@ -17,7 +17,13 @@ export default function StudentProfilePage() {
     const studentStars = totalStars[user?.studentId] || 0;
     const unlockedBadges = getUnlockedBadges(user?.studentId);
     const allBadges = getAllBadges();
-    const visibleCourses = courses;
+    const visibleCourses = useMemo(
+        () => {
+            const assignedCourseIds = user?.courseIds || [];
+            return courses.filter(course => assignedCourseIds.includes(course.id));
+        },
+        [courses, user?.courseIds]
+    );
 
     // Rank from leaderboard
     const myRank = useMemo(() => {

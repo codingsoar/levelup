@@ -1381,3 +1381,156 @@ Copy this block for every new entry:
 
 ### Notes
 - The server lint command reported `no-undef` for Node globals because the repo ESLint config targets browser code; Node syntax validation was used for backend files instead.
+
+## 2026-03-17 - Repository Analysis Snapshot
+
+### Request
+- Analyze the current project in this folder and explain its structure and state.
+
+### Scope
+- Repository-wide read-only analysis of frontend, backend, stores, and runtime health.
+- No product behavior changes were made.
+
+### Implemented
+- Reviewed the shared worklog and current repository status before analysis.
+- Inspected app routing, key Zustand stores, sample course data, admin/student pages, marketplace, assessments, and Express/SQLite server files.
+- Verified current runtime health with frontend build attempt and backend syntax checks.
+
+### Validation
+- `git status --short` -> Success (clean working tree)
+- `npm run build` -> Failed in sandbox (`spawn EPERM` while loading Vite config)
+- `node --check server\server.js` -> Success
+- `node --check server\database.js` -> Success
+
+### Files
+- `package.json`
+- `vite.config.js`
+- `src/App.jsx`
+- `src/stores/useAuthStore.js`
+- `src/stores/useProgressStore.js`
+- `src/stores/useStageStore.js`
+- `src/stores/useAssessmentStore.js`
+- `src/stores/useMarketplaceStore.js`
+- `src/stores/useBadgeStore.js`
+- `src/pages/StudentDashboardPage.jsx`
+- `src/pages/AdminPage.jsx`
+- `src/pages/MarketplacePage.jsx`
+- `src/data/sampleCourses.js`
+- `server/server.js`
+- `server/database.js`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- The repo is a Vite/React student-learning platform with Zustand persistence plus an Express/SQLite backend for auth and progress sync.
+- `README.md` is still template-level and does not document the actual project.
+- Multiple source files contain mojibake/mixed text encoding in Korean strings; functionality appears intact, but text maintenance is riskier in those files.
+
+## 2026-03-17 - Functional Audit Snapshot
+
+### Request
+- Check whether the implemented features are fully functional across the current project.
+
+### Scope
+- Repository-wide validation covering frontend build/lint, backend syntax, live API checks, and code-path review for critical student/admin flows.
+- No product behavior changes were made.
+
+### Implemented
+- Re-ran repository state checks before auditing.
+- Ran ESLint, frontend production build, and backend syntax validation.
+- Started the local server and exercised auth, student upsert/delete, mission completion, progress fetch, and admin dashboard APIs.
+- Reviewed critical frontend integration points for logout, progress sync, and student/admin data usage.
+
+### Validation
+- `git status --short` -> Modified: `ANTIGRAVITY_WORKLOG.md`
+- `npm run lint` -> Failed (server files use browser-focused ESLint globals)
+- `npm run build` -> Sandbox failed (`spawn EPERM`), escalated success
+- `node --check server\server.js` -> Success
+- `node --check server\database.js` -> Success
+- Live API audit -> Found reproducible issues in mission-complete consistency and duplicate star awarding
+
+### Files
+- `src/components/StudentLayout.jsx`
+- `src/pages/StudentProfilePage.jsx`
+- `src/stores/useAuthStore.js`
+- `src/stores/useProgressStore.js`
+- `server/server.js`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- The project is not currently in a state where all implemented features can be called fully reliable.
+- Verified defects include: stale immediate progress reads after completion, duplicate star awards on repeated completion API calls, incomplete logout behavior from `StudentLayout`, and student-profile course stats using all courses instead of assigned courses.
+- Admin dashboard syncing also appears non-authoritative because server-loaded students are merged with local leftovers rather than replaced.
+
+## 2026-03-17 - Fix Functional Audit Findings
+
+### Request
+- Fix the verified functional issues and validate the fixes again.
+
+### Scope
+- Mission completion consistency on the backend.
+- Student logout, student-profile course filtering, and admin student sync on the frontend/store.
+- No unrelated UI redesign or feature expansion.
+
+### Implemented
+- Changed `/api/progress/complete` to check existing completion first, avoid duplicate star awards, and wait for DB callbacks before returning success.
+- Added `alreadyCompleted` handling in `useProgressStore` so client state does not add stars again if the server reports a duplicate completion.
+- Fixed shared student-layout logout to call `logout()` before navigation.
+- Limited `StudentProfilePage` progress stats to assigned courses only.
+- Changed `useAuthStore.setAllStudents` to replace the admin student list with server data instead of merging stale local leftovers.
+
+### Validation
+- `npx eslint src\components\StudentLayout.jsx src\pages\StudentProfilePage.jsx src\stores\useAuthStore.js src\stores\useProgressStore.js` -> Success
+- `node --check server\server.js` -> Success
+- `node --check server\database.js` -> Success
+- `npm run build` -> Sandbox failed (`spawn EPERM`), escalated success
+- Live API regression test -> Success (immediate progress read returned stars/reflection, duplicate completion did not increase stars)
+
+### Files
+- `server/server.js`
+- `src/components/StudentLayout.jsx`
+- `src/pages/StudentProfilePage.jsx`
+- `src/stores/useAuthStore.js`
+- `src/stores/useProgressStore.js`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Repo-wide `npm run lint` still reports Node-global issues in `server/` because the current ESLint config is browser-oriented; this is a tooling/config gap, not a regression from these fixes.
+
+## 2026-03-17 - Lint Split And Ubuntu Deployment Assets
+
+### Request
+- Split ESLint so repo-wide lint works for both frontend and backend.
+- Then add Ubuntu deployment documentation, PM2/Nginx config, server start scripts, and a deployment checklist.
+
+### Scope
+- Tooling/config only plus deployment documentation/assets.
+- No product feature behavior changes beyond keeping the repo build/lint healthy.
+
+### Implemented
+- Split `eslint.config.js` into frontend React/browser rules and backend Node/CommonJS rules.
+- Replaced the template `README.md` with a project-specific overview and deployment entry points.
+- Added `DEPLOY_UBUNTU.md` with package install steps, build/start commands, Nginx setup, update flow, and a deployment checklist.
+- Rewrote `server/ecosystem.config.js` as a production-focused PM2 config for `/var/www/starquest/server`.
+- Replaced `server/nginx.conf.example` with a clean Ubuntu/Nginx reverse-proxy config for SPA + `/api`.
+- Added `server/start-prod.sh` and `server/restart-prod.sh` for first boot and update/reload flows.
+
+### Validation
+- `npm run lint` -> Success
+- `node --check server\server.js` -> Success
+- `node --check server\database.js` -> Success
+- `node --check server\ecosystem.config.js` -> Success
+- `npm run build` -> Sandbox failed (`spawn EPERM`), escalated success
+
+### Files
+- `eslint.config.js`
+- `README.md`
+- `DEPLOY_UBUNTU.md`
+- `server/ecosystem.config.js`
+- `server/nginx.conf.example`
+- `server/start-prod.sh`
+- `server/restart-prod.sh`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- The PM2 and Nginx configs assume deployment under `/var/www/starquest`; change that path in docs/config if the server uses a different location.
+- The shell scripts are intended for Ubuntu/Linux and should be made executable on the server with `chmod +x` after deploy.

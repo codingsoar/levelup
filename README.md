@@ -1,16 +1,48 @@
-# React + Vite
+# StarQuest
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+StarQuest is a student learning platform with a React/Vite frontend and an Express/SQLite backend.
 
-Currently, two official plugins are available:
+## Stack
+- Frontend: React 19, Vite, Tailwind CSS, HeroUI, Zustand
+- Backend: Express 5, SQLite
+- Process manager: PM2
+- Reverse proxy: Nginx
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Project Layout
+- `src/`: frontend app
+- `server/`: backend API and SQLite setup
+- `dist/`: frontend production build output
+- `server/database.sqlite`: runtime database file created on the server
 
-## React Compiler
+## Local Development
+Frontend:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+npm run dev
+```
 
-## Expanding the ESLint configuration
+Backend:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+cd server
+npm install
+node server.js
+```
+
+The Vite dev server proxies `/api` to `http://localhost:3000`.
+
+## Validation
+- `npm run lint`
+- `npm run build`
+- `node --check server/server.js`
+- `node --check server/database.js`
+
+## Ubuntu Deployment
+Use the Ubuntu deployment guide at [DEPLOY_UBUNTU.md](/D:/personal/DEPLOY_UBUNTU.md).
+
+Key deployment files:
+- [server/ecosystem.config.js](/D:/personal/server/ecosystem.config.js)
+- [server/nginx.conf.example](/D:/personal/server/nginx.conf.example)
+- [server/start-prod.sh](/D:/personal/server/start-prod.sh)
+- [server/restart-prod.sh](/D:/personal/server/restart-prod.sh)

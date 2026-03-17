@@ -103,54 +103,101 @@ app.get('/api/progress/:studentId', (req, res) => {
 app.post('/api/progress/complete', (req, res) => {
     const { studentId, courseId, stageId, difficulty, reflectionEntry } = req.body;
 
-    db.serialize(() => {
-        db.run(
-            `
-                INSERT OR REPLACE INTO progress (student_id, course_id, stage_id, difficulty, completed, last_updated)
-                VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
-            `,
-            [studentId, courseId, stageId, difficulty]
-        );
+    db.get(
+        `
+            SELECT completed
+            FROM progress
+            WHERE student_id = ? AND course_id = ? AND stage_id = ? AND difficulty = ?
+        `,
+        [studentId, courseId, stageId, difficulty],
+        (checkErr, existingProgress) => {
+            if (checkErr) {
+                return res.status(500).json({ success: false, error: checkErr.message });
+            }
 
-        db.run(
-            `
-                INSERT INTO student_stats (student_id, total_stars)
-                VALUES (?, 1)
-                ON CONFLICT(student_id) DO UPDATE SET total_stars = total_stars + 1
-            `,
-            [studentId]
-        );
+            const alreadyCompleted = existingProgress?.completed === 1;
 
-        if (reflectionEntry) {
             db.run(
                 `
-                    INSERT INTO reflections (
-                        student_id,
-                        course_id,
-                        stage_id,
-                        difficulty,
-                        content,
-                        mission_title,
-                        course_title,
-                        stage_title
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT OR REPLACE INTO progress (student_id, course_id, stage_id, difficulty, completed, last_updated)
+                    VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
                 `,
-                [
-                    studentId,
-                    courseId,
-                    stageId,
-                    difficulty,
-                    reflectionEntry.reflection,
-                    reflectionEntry.missionTitle || '',
-                    reflectionEntry.courseTitle || '',
-                    reflectionEntry.stageTitle || '',
-                ]
+                [studentId, courseId, stageId, difficulty],
+                (progressErr) => {
+                    if (progressErr) {
+                        return res.status(500).json({ success: false, error: progressErr.message });
+                    }
+
+                    const finishResponse = () => {
+                        res.json({
+                            success: true,
+                            alreadyCompleted,
+                            message: alreadyCompleted
+                                ? 'Mission was already completed'
+                                : 'Mission completed successfully',
+                        });
+                    };
+
+                    const insertReflectionIfNeeded = () => {
+                        if (!reflectionEntry || alreadyCompleted) {
+                            return finishResponse();
+                        }
+
+                        db.run(
+                            `
+                                INSERT INTO reflections (
+                                    student_id,
+                                    course_id,
+                                    stage_id,
+                                    difficulty,
+                                    content,
+                                    mission_title,
+                                    course_title,
+                                    stage_title
+                                )
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            `,
+                            [
+                                studentId,
+                                courseId,
+                                stageId,
+                                difficulty,
+                                reflectionEntry.reflection,
+                                reflectionEntry.missionTitle || '',
+                                reflectionEntry.courseTitle || '',
+                                reflectionEntry.stageTitle || '',
+                            ],
+                            (reflectionErr) => {
+                                if (reflectionErr) {
+                                    return res.status(500).json({ success: false, error: reflectionErr.message });
+                                }
+                                finishResponse();
+                            }
+                        );
+                    };
+
+                    if (alreadyCompleted) {
+                        return insertReflectionIfNeeded();
+                    }
+
+                    db.run(
+                        `
+                            INSERT INTO student_stats (student_id, total_stars)
+                            VALUES (?, 1)
+                            ON CONFLICT(student_id) DO UPDATE SET total_stars = total_stars + 1
+                        `,
+                        [studentId],
+                        (statsErr) => {
+                            if (statsErr) {
+                                return res.status(500).json({ success: false, error: statsErr.message });
+                            }
+                            insertReflectionIfNeeded();
+                        }
+                    );
+                }
             );
         }
-    });
-
-    res.json({ success: true, message: 'Mission completed successfully' });
+    );
 });
 
 app.post('/api/admin/students/upsert', (req, res) => {

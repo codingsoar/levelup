@@ -34,6 +34,19 @@ const applyMissionCompletion = (state, studentId, courseId, stageId, difficulty,
     return { progress: newProgress };
 };
 
+const applyMissionProgressOnly = (state, studentId, courseId, stageId, difficulty) => {
+    const newProgress = { ...state.progress };
+
+    newProgress[studentId] = { ...(newProgress[studentId] || {}) };
+    newProgress[studentId][courseId] = { ...(newProgress[studentId][courseId] || {}) };
+    newProgress[studentId][courseId][stageId] = {
+        ...(newProgress[studentId][courseId][stageId] || { easy: false, normal: false, hard: false }),
+        [difficulty]: true,
+    };
+
+    return { progress: newProgress };
+};
+
 export const useProgressStore = create(
     persist(
         (set, get) => ({
@@ -101,7 +114,9 @@ export const useProgressStore = create(
                     });
                     const data = await response.json();
 
-                    if (data.success) {
+                    if (data.success && data.alreadyCompleted) {
+                        set(state => applyMissionProgressOnly(state, studentId, courseId, stageId, difficulty));
+                    } else if (data.success) {
                         set(state => applyMissionCompletion(state, studentId, courseId, stageId, difficulty, reflectionEntry));
                     }
                 } catch (error) {
