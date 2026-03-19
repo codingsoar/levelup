@@ -86,6 +86,36 @@ const deleteStudentFromServer = async (studentId) => {
     }
 };
 
+const syncSubAdminToServer = async (subAdmin) => {
+    const normalizedSubAdmin = normalizeSubAdmin(subAdmin);
+
+    const response = await fetch('/api/admin/subadmins/upsert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            adminId: normalizedSubAdmin.adminId,
+            password: normalizedSubAdmin.password,
+            name: normalizedSubAdmin.name,
+            courseIds: normalizedSubAdmin.courseIds,
+            permissions: normalizedSubAdmin.permissions,
+        }),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to sync sub-admin: ${response.status}`);
+    }
+};
+
+const deleteSubAdminFromServer = async (adminId) => {
+    const response = await fetch(`/api/admin/subadmins/${encodeURIComponent(adminId)}`, {
+        method: 'DELETE',
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to delete sub-admin: ${response.status}`);
+    }
+};
+
 export const useAuthStore = create(
     persist(
         (set, get) => ({
@@ -168,17 +198,35 @@ export const useAuthStore = create(
                 registeredStudents: (students || []).map(normalizeStudent)
             }),
 
-            changeAdminPassword: (currentPassword, newPassword) => {
-                const adminCredentials = get().adminCredentials || DEFAULT_ADMIN_CREDENTIALS;
-                if (adminCredentials.password !== currentPassword) {
-                    return { ok: false, reason: 'incorrect_password' };
-                }
-
+            changeAdminPassword: async (currentPassword, newPassword) => {
+                const trimmedCurrentPassword = currentPassword.trim();
                 const trimmedNextPassword = newPassword.trim();
-                if (!trimmedNextPassword) {
+
+                if (!trimmedCurrentPassword || !trimmedNextPassword) {
                     return { ok: false, reason: 'invalid_input' };
                 }
 
+                try {
+                    const response = await fetch('/api/admin/change-password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            adminId: get().user?.adminId || 'admin',
+                            currentPassword: trimmedCurrentPassword,
+                            newPassword: trimmedNextPassword,
+                        }),
+                    });
+                    const data = await response.json();
+
+                    if (!data?.success) {
+                        return { ok: false, reason: data?.reason || 'server_error' };
+                    }
+                } catch (error) {
+                    console.error('Failed to change admin password on server:', error);
+                    return { ok: false, reason: 'server_unavailable' };
+                }
+
+                const adminCredentials = get().adminCredentials || DEFAULT_ADMIN_CREDENTIALS;
                 set({
                     adminCredentials: {
                         ...adminCredentials,
@@ -405,29 +453,84 @@ export const useAuthStore = create(
             // ═══════════════════════════════════════
             // 서브관리자 관리
             // ═══════════════════════════════════════
-            addSubAdmin: (adminId, password, name, courseIds, permissions) => {
+            addSubAdmin: async (adminId, password, name, courseIds, permissions) => {
                 if (!adminId || !password || !name) return { ok: false, reason: 'invalid_input' };
                 const existing = get().subAdmins.find(s => s.adminId === adminId);
                 if (existing) return { ok: false, reason: 'already_exists' };
                 if (adminId === 'admin') return { ok: false, reason: 'reserved_id' };
+
+                const nextSubAdmin = normalizeSubAdmin({
+                    adminId: adminId.trim(),
+                    password: password.trim(),
+                    name: name.trim(),
+                    courseIds: courseIds || [],
+                    permissions,
+                });
+
+                try {
+                    await syncSubAdminToServer(nextSubAdmin);
+                } catch (error) {
+                    console.error('Failed to create sub-admin on server:', error);
+                    return { ok: false, reason: 'server_unavailable' };
+                }
+
                 set(state => ({
-                    subAdmins: [...state.subAdmins, normalizeSubAdmin({ adminId: adminId.trim(), password: password.trim(), name: name.trim(), courseIds: courseIds || [], permissions })]
+                    subAdmins: [...state.subAdmins, nextSubAdmin]
                 }));
                 return { ok: true };
             },
 
-            removeSubAdmin: (adminId) => {
+            removeSubAdmin: async (adminId) => {
+                try {
+                    await deleteSubAdminFromServer(adminId);
+                } catch (error) {
+                    console.error('Failed to delete sub-admin on server:', error);
+                    return { ok: false, reason: 'server_unavailable' };
+                }
+
                 set(state => ({
                     subAdmins: state.subAdmins.filter(s => s.adminId !== adminId)
                 }));
+                return { ok: true };
             },
 
-            updateSubAdmin: (adminId, updates) => {
+            updateSubAdmin: async (adminId, updates) => {
+                const existingSubAdmin = get().subAdmins.find(subAdmin => subAdmin.adminId === adminId);
+                if (!existingSubAdmin) {
+                    return { ok: false, reason: 'not_found' };
+                }
+
+                const nextSubAdmin = normalizeSubAdmin({ ...existingSubAdmin, ...updates });
+
+                try {
+                    await syncSubAdminToServer(nextSubAdmin);
+                } catch (error) {
+                    console.error('Failed to update sub-admin on server:', error);
+                    return { ok: false, reason: 'server_unavailable' };
+                }
+
                 set(state => ({
                     subAdmins: state.subAdmins.map(s =>
-                        s.adminId === adminId ? normalizeSubAdmin({ ...s, ...updates }) : s
+                        s.adminId === adminId ? nextSubAdmin : s
                     )
                 }));
+                return { ok: true };
+            },
+
+            loadSubAdminsFromServer: async () => {
+                try {
+                    const response = await fetch('/api/admin/subadmins');
+                    if (!response.ok) {
+                        throw new Error(`Failed to load sub-admins: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    set({
+                        subAdmins: (data?.subAdmins || []).map(normalizeSubAdmin),
+                    });
+                } catch (error) {
+                    console.error('Failed to load sub-admins from server:', error);
+                }
             },
         }),
         {

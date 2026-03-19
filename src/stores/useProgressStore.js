@@ -167,22 +167,54 @@ export const useProgressStore = create(
                 return get().progress;
             },
 
-            spendStars: (studentId, amount) => {
+            spendStars: async (studentId, amount) => {
                 const current = get().totalStars[studentId] || 0;
                 if (current < amount) return false;
-                set(state => ({
-                    totalStars: { ...state.totalStars, [studentId]: current - amount },
-                }));
-                return true;
+
+                try {
+                    const response = await fetch('/api/progress/spend-stars', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ studentId, amount }),
+                    });
+                    const data = await response.json();
+
+                    if (!data?.success) {
+                        return false;
+                    }
+
+                    set(state => ({
+                        totalStars: { ...state.totalStars, [studentId]: data.totalStars ?? (current - amount) },
+                    }));
+                    return true;
+                } catch (error) {
+                    console.error('Error spending stars on server:', error);
+                    return false;
+                }
             },
 
-            clearAllProgress: () => {
-                set({
-                    progress: {},
-                    totalStars: {},
-                    submissions: [],
-                    reflections: [],
-                });
+            clearAllProgress: async () => {
+                try {
+                    const response = await fetch('/api/admin/reset-progress', {
+                        method: 'POST',
+                    });
+                    const data = await response.json();
+
+                    if (!data?.success) {
+                        return false;
+                    }
+
+                    set({
+                        progress: {},
+                        totalStars: {},
+                        submissions: [],
+                        reflections: [],
+                    });
+                    return true;
+                } catch (error) {
+                    console.error('Error clearing progress on server:', error);
+                    return false;
+                }
             },
         }),
         {

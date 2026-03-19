@@ -96,6 +96,14 @@ function initializeDatabase() {
             )
         `);
 
+        db.run(`
+            CREATE TABLE IF NOT EXISTS app_state (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         db.run(
             `
                 INSERT OR IGNORE INTO users (id, password, name, role)

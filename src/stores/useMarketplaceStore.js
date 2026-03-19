@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { scheduleSharedStateSave } from '../lib/sharedStateClient';
 
 // Default shop items - admin can customize these
 const defaultShopItems = [
@@ -20,6 +21,7 @@ const defaultShopItems = [
 export const useMarketplaceStore = create(
     persist(
         (set, get) => ({
+            serverSyncReady: false,
             // Shop items that can be purchased
             shopItems: defaultShopItems,
 
@@ -33,14 +35,14 @@ export const useMarketplaceStore = create(
             },
 
             // Purchase an item (returns { success, message })
-            purchaseItem: (studentId, itemId, spendStars, studentName) => {
+            purchaseItem: async (studentId, itemId, spendStars, studentName) => {
                 const items = get().shopItems;
                 const item = items.find(i => i.id === itemId);
                 if (!item) return { success: false, message: '아이템을 찾을 수 없습니다.' };
                 if (item.stock <= 0) return { success: false, message: '품절된 상품입니다.' };
 
                 // spendStars is a callback that deducts stars from progressStore
-                const result = spendStars(studentId, item.price);
+                const result = await spendStars(studentId, item.price);
                 if (!result) return { success: false, message: '별이 부족합니다.' };
 
                 set(state => ({
@@ -98,7 +100,47 @@ export const useMarketplaceStore = create(
                     shopItems: state.shopItems.filter(i => i.id !== itemId),
                 }));
             },
+
+            applyServerState: (serverState) => {
+                if (!serverState || typeof serverState !== 'object') return;
+                set({
+                    shopItems: Array.isArray(serverState.shopItems) ? serverState.shopItems : defaultShopItems,
+                    purchases: Array.isArray(serverState.purchases) ? serverState.purchases : [],
+                });
+            },
+
+            enableServerSync: () => {
+                if (!get().serverSyncReady) {
+                    set({ serverSyncReady: true });
+                }
+            },
         }),
         { name: 'starquest-marketplace' }
     )
 );
+
+let previousMarketplaceSnapshot = {
+    shopItems: useMarketplaceStore.getState().shopItems,
+    purchases: useMarketplaceStore.getState().purchases,
+};
+
+useMarketplaceStore.subscribe((state) => {
+    if (!state.serverSyncReady) return;
+
+    if (
+        state.shopItems === previousMarketplaceSnapshot.shopItems &&
+        state.purchases === previousMarketplaceSnapshot.purchases
+    ) {
+        return;
+    }
+
+    previousMarketplaceSnapshot = {
+        shopItems: state.shopItems,
+        purchases: state.purchases,
+    };
+
+    scheduleSharedStateSave('marketplace', {
+        shopItems: state.shopItems,
+        purchases: state.purchases,
+    });
+});

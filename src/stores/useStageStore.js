@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
 import { sampleCourses } from '../data/sampleCourses';
+import { scheduleSharedStateSave } from '../lib/sharedStateClient';
 
 // IndexedDB storage adapter for large data (no 5MB localStorage limit)
 const indexedDBStorage = {
@@ -21,6 +22,7 @@ export const useStageStore = create(
     persist(
         (set, get) => ({
             courses: sampleCourses,
+            serverSyncReady: false,
 
             getCourse: (courseId) => get().courses.find(c => c.id === courseId),
 
@@ -70,6 +72,17 @@ export const useStageStore = create(
                     ),
                 }));
             },
+
+            applyServerState: (courses) => {
+                if (!Array.isArray(courses)) return;
+                set({ courses });
+            },
+
+            enableServerSync: () => {
+                if (!get().serverSyncReady) {
+                    set({ serverSyncReady: true });
+                }
+            },
         }),
         {
             name: 'starquest-stages',
@@ -77,3 +90,14 @@ export const useStageStore = create(
         }
     )
 );
+
+let previousCourses = useStageStore.getState().courses;
+
+useStageStore.subscribe((state) => {
+    if (!state.serverSyncReady) return;
+
+    if (state.courses === previousCourses) return;
+    previousCourses = state.courses;
+
+    scheduleSharedStateSave('courses', state.courses);
+});

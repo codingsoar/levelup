@@ -1,9 +1,14 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HeroUIProvider } from '@heroui/react';
 import useThemeStore from './stores/useThemeStore';
 import { useAuthStore } from './stores/useAuthStore';
+import { useStageStore } from './stores/useStageStore';
+import { useAssessmentStore } from './stores/useAssessmentStore';
+import { useMarketplaceStore } from './stores/useMarketplaceStore';
+import { useBadgeStore } from './stores/useBadgeStore';
 import BadgeNotification from './components/BadgeNotification';
+import { fetchSharedStateBootstrap } from './lib/sharedStateClient';
 
 const StudentLoginPage = lazy(() => import('./pages/StudentLoginPage'));
 const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage'));
@@ -32,11 +37,72 @@ function ProtectedRoute({ children, adminOnly }) {
 
 export default function App() {
   const { isDark } = useThemeStore();
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark);
     document.body.classList.toggle('dark', isDark);
   }, [isDark]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const bootstrapSharedState = async () => {
+      try {
+        await Promise.all([
+          useAuthStore.persist?.rehydrate?.(),
+          useStageStore.persist?.rehydrate?.(),
+          useAssessmentStore.persist?.rehydrate?.(),
+          useMarketplaceStore.persist?.rehydrate?.(),
+          useBadgeStore.persist?.rehydrate?.(),
+        ]);
+
+        await useAuthStore.getState().loadSubAdminsFromServer?.();
+
+        const sharedState = await fetchSharedStateBootstrap();
+
+        if (Object.prototype.hasOwnProperty.call(sharedState, 'courses')) {
+          useStageStore.getState().applyServerState?.(sharedState.courses);
+        }
+        useStageStore.getState().enableServerSync?.();
+
+        if (Object.prototype.hasOwnProperty.call(sharedState, 'assessments')) {
+          useAssessmentStore.getState().applyServerState?.(sharedState.assessments);
+        }
+        useAssessmentStore.getState().enableServerSync?.();
+
+        if (Object.prototype.hasOwnProperty.call(sharedState, 'marketplace')) {
+          useMarketplaceStore.getState().applyServerState?.(sharedState.marketplace);
+        }
+        useMarketplaceStore.getState().enableServerSync?.();
+
+        if (Object.prototype.hasOwnProperty.call(sharedState, 'badges')) {
+          useBadgeStore.getState().applyServerState?.(sharedState.badges);
+        }
+        useBadgeStore.getState().enableServerSync?.();
+      } finally {
+        if (isMounted) {
+          setIsBootstrapping(false);
+        }
+      }
+    };
+
+    bootstrapSharedState();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  if (isBootstrapping) {
+    return (
+      <HeroUIProvider>
+        <div className={isDark ? 'dark' : ''} style={{ minHeight: '100vh' }}>
+          <AppLoadingFallback />
+        </div>
+      </HeroUIProvider>
+    );
+  }
 
   return (
     <HeroUIProvider>

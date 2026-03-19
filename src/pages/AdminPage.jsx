@@ -3434,14 +3434,14 @@ const SettingsManagement = () => {
     });
     const [passwordStatus, setPasswordStatus] = useState({ type: '', message: '' });
 
-    const handleResetProgress = () => {
+    const handleResetProgress = async () => {
         if (window.confirm('WARNING: This will delete ALL student progress data. This action cannot be undone. Are you sure?')) {
-            clearAllProgress();
-            alert('All progress data has been reset.');
+            const ok = await clearAllProgress();
+            alert(ok ? 'All progress data has been reset.' : 'Failed to reset progress data.');
         }
     };
 
-    const handleAdminPasswordChange = (event) => {
+    const handleAdminPasswordChange = async (event) => {
         event.preventDefault();
         setPasswordStatus({ type: '', message: '' });
 
@@ -3459,7 +3459,7 @@ const SettingsManagement = () => {
             return;
         }
 
-        const result = changeAdminPassword(currentPassword, nextPassword);
+        const result = await changeAdminPassword(currentPassword, nextPassword);
         if (!result?.ok) {
             const message = result?.reason === 'incorrect_password'
                 ? '현재 비밀번호가 올바르지 않습니다.'
@@ -3823,7 +3823,7 @@ const SubAdminManagement = ({ subAdmins, courses, onAddSubAdmin, onRemoveSubAdmi
         setIsModalOpen(true);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         const nextAdminId = formData.adminId.trim();
@@ -3844,15 +3844,19 @@ const SubAdminManagement = ({ subAdmins, courses, onAddSubAdmin, onRemoveSubAdmi
         }
 
         if (editingAdminId) {
-            onUpdateSubAdmin(editingAdminId, {
+            const result = await onUpdateSubAdmin(editingAdminId, {
                 adminId: nextAdminId,
                 name: nextName,
                 password: nextPassword,
                 courseIds: fullCourseIds,
                 permissions: nextPermissions,
             });
+            if (!result?.ok) {
+                setError('Failed to update the sub-admin account.');
+                return;
+            }
         } else {
-            const result = onAddSubAdmin(nextAdminId, nextPassword, nextName, fullCourseIds, nextPermissions);
+            const result = await onAddSubAdmin(nextAdminId, nextPassword, nextName, fullCourseIds, nextPermissions);
             if (!result?.ok) {
                 if (result?.reason === 'already_exists') {
                     setError('이미 사용 중인 서브관리자 아이디입니다.');
@@ -3929,7 +3933,7 @@ const SubAdminManagement = ({ subAdmins, courses, onAddSubAdmin, onRemoveSubAdmi
                                         <button
                                             onClick={() => {
                                                 if (window.confirm(`${subAdmin.name} 서브관리자 계정을 삭제하시겠습니까?`)) {
-                                                    onRemoveSubAdmin(subAdmin.adminId);
+                                                    void onRemoveSubAdmin(subAdmin.adminId);
                                                 }
                                             }}
                                             className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"

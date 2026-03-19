@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { scheduleSharedStateSave } from '../lib/sharedStateClient';
 
 // Generate unique IDs
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -116,6 +117,7 @@ export const useAssessmentStore = create(
     persist(
         (set, get) => ({
             // ── 1) 수업별 평가 계획 ──
+            serverSyncReady: false,
             assessmentPlans: {},
 
             // ── 2) 학생별 점수 (지필) ──
@@ -516,7 +518,66 @@ export const useAssessmentStore = create(
             getGeneratedReport: (courseId, studentId) => {
                 return get().generatedReports?.[courseId]?.[studentId] || null;
             },
+
+            applyServerState: (serverState) => {
+                if (!serverState || typeof serverState !== 'object') return;
+                set({
+                    assessmentPlans: serverState.assessmentPlans || {},
+                    studentScores: serverState.studentScores || {},
+                    sessionScores: serverState.sessionScores || [],
+                    sessionComments: serverState.sessionComments || [],
+                    neisUploads: serverState.neisUploads || [],
+                    generatedReports: serverState.generatedReports || {},
+                });
+            },
+
+            enableServerSync: () => {
+                if (!get().serverSyncReady) {
+                    set({ serverSyncReady: true });
+                }
+            },
         }),
         { name: 'starquest-assessments' }
     )
 );
+
+let previousAssessmentSnapshot = {
+    assessmentPlans: useAssessmentStore.getState().assessmentPlans,
+    studentScores: useAssessmentStore.getState().studentScores,
+    sessionScores: useAssessmentStore.getState().sessionScores,
+    sessionComments: useAssessmentStore.getState().sessionComments,
+    neisUploads: useAssessmentStore.getState().neisUploads,
+    generatedReports: useAssessmentStore.getState().generatedReports,
+};
+
+useAssessmentStore.subscribe((state) => {
+    if (!state.serverSyncReady) return;
+
+    const hasRelevantChange =
+        state.assessmentPlans !== previousAssessmentSnapshot.assessmentPlans ||
+        state.studentScores !== previousAssessmentSnapshot.studentScores ||
+        state.sessionScores !== previousAssessmentSnapshot.sessionScores ||
+        state.sessionComments !== previousAssessmentSnapshot.sessionComments ||
+        state.neisUploads !== previousAssessmentSnapshot.neisUploads ||
+        state.generatedReports !== previousAssessmentSnapshot.generatedReports;
+
+    if (!hasRelevantChange) return;
+
+    previousAssessmentSnapshot = {
+        assessmentPlans: state.assessmentPlans,
+        studentScores: state.studentScores,
+        sessionScores: state.sessionScores,
+        sessionComments: state.sessionComments,
+        neisUploads: state.neisUploads,
+        generatedReports: state.generatedReports,
+    };
+
+    scheduleSharedStateSave('assessments', {
+        assessmentPlans: state.assessmentPlans,
+        studentScores: state.studentScores,
+        sessionScores: state.sessionScores,
+        sessionComments: state.sessionComments,
+        neisUploads: state.neisUploads,
+        generatedReports: state.generatedReports,
+    });
+});

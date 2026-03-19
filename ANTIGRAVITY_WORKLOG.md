@@ -1557,3 +1557,135 @@ Copy this block for every new entry:
 
 ### Notes
 - Push advanced `levelup.git` `main` from `72d7ec7` to `c8889b7`.
+
+## 2026-03-17 - Switch Origin To LevelUp
+
+### Request
+- Make `https://github.com/codingsoar/levelup.git` the dedicated remote for this project.
+
+### Scope
+- Git remote configuration only.
+- No product code changes.
+
+### Implemented
+- Changed `origin` from `codingsoar/personal` to `codingsoar/levelup`.
+- Refreshed remote tracking data from the new `origin`.
+
+### Validation
+- `git remote -v` -> Success (`origin` now points to `codingsoar/levelup`)
+- `git fetch origin` -> Success
+- `git status --short --branch` -> Success (`main...origin/main`)
+
+### Files
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Local `main` is now aligned with `levelup` as the default push/fetch remote.
+
+## 2026-03-19 - Repository Analysis Refresh
+
+### Request
+- Analyze the current project state in this folder.
+
+### Scope
+- Repository-wide read-only analysis of current structure, runtime health, and maintenance risks.
+- No product behavior changes were made.
+
+### Implemented
+- Re-read the shared worklog and current git status before analysis.
+- Inspected the frontend app entry, key Zustand stores, backend API server, and database initialization.
+- Re-ran current validation commands for lint, backend syntax, and frontend build behavior.
+
+### Validation
+- `git status --short` -> Modified: `ANTIGRAVITY_WORKLOG.md`
+- `npm run lint` -> Success
+- `node --check server\server.js` -> Success
+- `node --check server\database.js` -> Success
+- `npm run build` -> Failed in sandbox (`spawn EPERM` while loading `vite.config.js`)
+
+### Files
+- `package.json`
+- `README.md`
+- `src/App.jsx`
+- `src/stores/useAuthStore.js`
+- `src/stores/useProgressStore.js`
+- `server/server.js`
+- `server/database.js`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Current workspace still has an uncommitted worklog-only diff from the prior remote/origin update.
+- Frontend/backend structure remains coherent; the main observed maintenance risk is mojibake/mixed text encoding in several files, including `server/database.js`.
+
+## 2026-03-19 - Cross-Device Persistence Fix
+
+### Request
+- Find why saved settings/content looked reset when opening the app from another computer on the Ubuntu LTS server.
+- Implement a fix so shared admin-managed data persists across devices.
+
+### Scope
+- Backend shared-state persistence and admin auth metadata APIs.
+- Frontend bootstrap/hydration and store sync for shared app data.
+- No redesign of page layouts.
+
+### Implemented
+- Added SQLite `app_state` storage and API endpoints for shared blobs: `courses`, `assessments`, `marketplace`, and `badges`.
+- Added server APIs for sub-admin list/upsert/delete and admin password change so those settings are no longer browser-local only.
+- Added frontend shared-state bootstrap on app startup, with server state applied before enabling save-back.
+- Wired `useStageStore`, `useAssessmentStore`, `useMarketplaceStore`, and `useBadgeStore` to sync shared state to the server.
+- Updated auth store/admin UI flows so sub-admin changes and admin password changes persist through the backend.
+
+### Validation
+- `npx eslint src\App.jsx src\stores\useAuthStore.js src\stores\useStageStore.js src\stores\useAssessmentStore.js src\stores\useMarketplaceStore.js src\stores\useBadgeStore.js src\lib\sharedStateClient.js src\pages\AdminPage.jsx` -> Success
+- `node --check server\server.js` -> Success
+- `node --check server\database.js` -> Success
+- `npm run build` -> Success (escalated; sandboxed build still hits `spawn EPERM` in this environment)
+
+### Files
+- `server/database.js`
+- `server/server.js`
+- `src/App.jsx`
+- `src/lib/sharedStateClient.js`
+- `src/stores/useAuthStore.js`
+- `src/stores/useStageStore.js`
+- `src/stores/useAssessmentStore.js`
+- `src/stores/useMarketplaceStore.js`
+- `src/stores/useBadgeStore.js`
+- `src/pages/AdminPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Root cause was mixed persistence strategy: only student auth/progress data was server-backed, while many admin-managed datasets were still stored only in browser persistence.
+- Theme and other intentionally device-local UI preferences were not moved to the server.
+- Existing server-backed progress/auth flows remain in place; this change adds shared persistence for previously local-only operational data.
+
+## 2026-03-19 - Cross-Device Persistence Follow-Up
+
+### Request
+- Finish the cross-device persistence fix so shared runtime values do not still diverge after purchases or admin resets.
+
+### Scope
+- Backend progress-related APIs and frontend purchase/reset flows.
+- Follow-up to the same shared-persistence task; no layout redesign.
+
+### Implemented
+- Added server API to spend student stars so marketplace purchases deduct from shared server-backed totals.
+- Added server API to reset all progress-related data so the admin reset action clears the shared database state rather than only local browser state.
+- Updated `useProgressStore`, marketplace purchase flow, and admin reset handler to await the server-backed operations.
+
+### Validation
+- `npx eslint src\App.jsx src\stores\useAuthStore.js src\stores\useStageStore.js src\stores\useAssessmentStore.js src\stores\useMarketplaceStore.js src\stores\useBadgeStore.js src\stores\useProgressStore.js src\lib\sharedStateClient.js src\pages\AdminPage.jsx src\pages\MarketplacePage.jsx` -> Success
+- `node --check server\server.js` -> Success
+- `node --check server\database.js` -> Success
+- `npm run build` -> Success (escalated)
+
+### Files
+- `server/server.js`
+- `src/stores/useProgressStore.js`
+- `src/stores/useMarketplaceStore.js`
+- `src/pages/MarketplacePage.jsx`
+- `src/pages/AdminPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Without this follow-up, marketplace star deductions and admin reset actions could still appear inconsistent across devices even after the main shared-state sync work.

@@ -26,6 +26,18 @@ const formatReflectionRow = (row) => ({
     timestamp: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
 });
 
+const parseJsonField = (value, fallback) => {
+    if (!value) return fallback;
+
+    try {
+        return JSON.parse(value);
+    } catch {
+        return fallback;
+    }
+};
+
+const APP_STATE_KEYS = new Set(['courses', 'assessments', 'marketplace', 'badges']);
+
 app.use(cors());
 app.use(express.json());
 
@@ -69,6 +81,48 @@ app.post('/api/auth/login', (req, res) => {
 
         return res.json({ success: true, user });
     });
+});
+
+app.get('/api/app-state', (req, res) => {
+    db.all(`SELECT key, value FROM app_state`, [], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ success: false, error: err.message });
+        }
+
+        const state = {};
+        (rows || []).forEach((row) => {
+            state[row.key] = parseJsonField(row.value, null);
+        });
+
+        return res.json({ success: true, state });
+    });
+});
+
+app.put('/api/app-state/:key', (req, res) => {
+    const { key } = req.params;
+    const { value } = req.body || {};
+
+    if (!APP_STATE_KEYS.has(key)) {
+        return res.status(400).json({ success: false, message: 'Invalid app-state key' });
+    }
+
+    db.run(
+        `
+            INSERT INTO app_state (key, value, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                updated_at = CURRENT_TIMESTAMP
+        `,
+        [key, JSON.stringify(value ?? null)],
+        (err) => {
+            if (err) {
+                return res.status(500).json({ success: false, error: err.message });
+            }
+
+            return res.json({ success: true });
+        }
+    );
 });
 
 app.get('/api/progress/:studentId', (req, res) => {
@@ -200,6 +254,37 @@ app.post('/api/progress/complete', (req, res) => {
     );
 });
 
+app.post('/api/progress/spend-stars', (req, res) => {
+    const { studentId, amount } = req.body || {};
+
+    if (!studentId || !Number.isFinite(amount) || amount <= 0) {
+        return res.status(400).json({ success: false, message: 'Invalid spend-stars payload' });
+    }
+
+    db.get(`SELECT total_stars FROM student_stats WHERE student_id = ?`, [studentId], (err, row) => {
+        if (err) {
+            return res.status(500).json({ success: false, error: err.message });
+        }
+
+        const currentStars = row?.total_stars || 0;
+        if (currentStars < amount) {
+            return res.status(400).json({ success: false, reason: 'insufficient_stars' });
+        }
+
+        db.run(
+            `UPDATE student_stats SET total_stars = total_stars - ? WHERE student_id = ?`,
+            [amount, studentId],
+            (updateErr) => {
+                if (updateErr) {
+                    return res.status(500).json({ success: false, error: updateErr.message });
+                }
+
+                return res.json({ success: true, totalStars: currentStars - amount });
+            }
+        );
+    });
+});
+
 app.post('/api/admin/students/upsert', (req, res) => {
     const {
         studentId,
@@ -238,6 +323,109 @@ app.delete('/api/admin/students/:studentId', (req, res) => {
     db.run(`DELETE FROM users WHERE id = ? AND role = 'student'`, [req.params.studentId], (err) => {
         if (err) return res.status(500).json({ success: false, error: err.message });
         return res.json({ success: true });
+    });
+});
+
+app.get('/api/admin/subadmins', (req, res) => {
+    db.all(`SELECT id, password, name, courseIds, permissions FROM users WHERE role = 'subadmin' ORDER BY id ASC`, [], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ success: false, error: err.message });
+        }
+
+        return res.json({
+            success: true,
+            subAdmins: (rows || []).map((row) => ({
+                adminId: row.id,
+                password: row.password,
+                name: row.name,
+                courseIds: parseCourseIds(row.courseIds),
+                permissions: parseJsonField(row.permissions, {}),
+            })),
+        });
+    });
+});
+
+app.post('/api/admin/subadmins/upsert', (req, res) => {
+    const { adminId, password, name, courseIds = [], permissions = {} } = req.body || {};
+
+    if (!adminId || !password || !name) {
+        return res.status(400).json({ success: false, message: 'Missing required sub-admin fields' });
+    }
+
+    if (adminId === 'admin') {
+        return res.status(400).json({ success: false, message: 'Reserved admin ID' });
+    }
+
+    db.run(
+        `
+            INSERT INTO users (id, password, name, role, courseIds, permissions)
+            VALUES (?, ?, ?, 'subadmin', ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                password = excluded.password,
+                name = excluded.name,
+                role = 'subadmin',
+                courseIds = excluded.courseIds,
+                permissions = excluded.permissions
+        `,
+        [adminId, password, name, JSON.stringify(courseIds || []), JSON.stringify(permissions || {})],
+        (err) => {
+            if (err) {
+                return res.status(500).json({ success: false, error: err.message });
+            }
+
+            return res.json({ success: true });
+        }
+    );
+});
+
+app.delete('/api/admin/subadmins/:adminId', (req, res) => {
+    db.run(`DELETE FROM users WHERE id = ? AND role = 'subadmin'`, [req.params.adminId], (err) => {
+        if (err) {
+            return res.status(500).json({ success: false, error: err.message });
+        }
+
+        return res.json({ success: true });
+    });
+});
+
+app.post('/api/admin/change-password', (req, res) => {
+    const { adminId = 'admin', currentPassword, newPassword } = req.body || {};
+
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ success: false, reason: 'invalid_input' });
+    }
+
+    db.get(`SELECT id, password FROM users WHERE id = ? AND role = 'admin'`, [adminId], (err, row) => {
+        if (err) {
+            return res.status(500).json({ success: false, error: err.message });
+        }
+
+        if (!row || row.password !== currentPassword) {
+            return res.status(401).json({ success: false, reason: 'incorrect_password' });
+        }
+
+        db.run(`UPDATE users SET password = ? WHERE id = ? AND role = 'admin'`, [newPassword, adminId], (updateErr) => {
+            if (updateErr) {
+                return res.status(500).json({ success: false, error: updateErr.message });
+            }
+
+            return res.json({ success: true });
+        });
+    });
+});
+
+app.post('/api/admin/reset-progress', (req, res) => {
+    db.serialize(() => {
+        db.run(`DELETE FROM progress`);
+        db.run(`DELETE FROM reflections`);
+        db.run(`DELETE FROM student_stats`);
+        db.run(`DELETE FROM badges`, (err) => {
+            if (err) {
+                return res.status(500).json({ success: false, error: err.message });
+            }
+
+            return res.json({ success: true });
+        });
     });
 });
 

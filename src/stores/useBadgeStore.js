@@ -6,6 +6,7 @@ import { useStageStore } from './useStageStore';
 import { useAssessmentStore } from './useAssessmentStore';
 import { useMarketplaceStore } from './useMarketplaceStore';
 import { useAuthStore } from './useAuthStore';
+import { scheduleSharedStateSave } from '../lib/sharedStateClient';
 
 // Stats calculator based on central stores
 const calculateStudentStats = (studentId) => {
@@ -147,6 +148,7 @@ export const useBadgeStore = create(
     persist(
         (set, get) => ({
             // { [studentId]: ['b1', 'b2'] }
+            serverSyncReady: false,
             unlockedBadges: {},
             lastSeenBadges: {}, // To track "NEW" indicator
 
@@ -207,7 +209,21 @@ export const useBadgeStore = create(
             // For Admin testing
             clearAllBadges: () => {
                 set({ unlockedBadges: {}, lastSeenBadges: {} });
-            }
+            },
+
+            applyServerState: (serverState) => {
+                if (!serverState || typeof serverState !== 'object') return;
+                set({
+                    unlockedBadges: serverState.unlockedBadges || {},
+                    lastSeenBadges: serverState.lastSeenBadges || {},
+                });
+            },
+
+            enableServerSync: () => {
+                if (!get().serverSyncReady) {
+                    set({ serverSyncReady: true });
+                }
+            },
         }),
         { 
             name: 'starquest-badges',
@@ -215,3 +231,29 @@ export const useBadgeStore = create(
         }
     )
 );
+
+let previousBadgeSnapshot = {
+    unlockedBadges: useBadgeStore.getState().unlockedBadges,
+    lastSeenBadges: useBadgeStore.getState().lastSeenBadges,
+};
+
+useBadgeStore.subscribe((state) => {
+    if (!state.serverSyncReady) return;
+
+    if (
+        state.unlockedBadges === previousBadgeSnapshot.unlockedBadges &&
+        state.lastSeenBadges === previousBadgeSnapshot.lastSeenBadges
+    ) {
+        return;
+    }
+
+    previousBadgeSnapshot = {
+        unlockedBadges: state.unlockedBadges,
+        lastSeenBadges: state.lastSeenBadges,
+    };
+
+    scheduleSharedStateSave('badges', {
+        unlockedBadges: state.unlockedBadges,
+        lastSeenBadges: state.lastSeenBadges,
+    });
+});

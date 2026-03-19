@@ -30,8 +30,8 @@ export default function MarketplacePage() {
         : shopItems.filter(item => item.category === selectedCategory);
     const myPurchases = getStudentPurchases(user?.studentId);
 
-    const handlePurchase = (itemId) => {
-        const result = purchaseItem(user?.studentId, itemId, spendStars, user?.name);
+    const handlePurchase = async (itemId) => {
+        const result = await purchaseItem(user?.studentId, itemId, spendStars, user?.name);
         setPurchaseMsg(result);
         setTimeout(() => setPurchaseMsg(null), 3000);
     };
