@@ -8,7 +8,7 @@ import { useAssessmentStore } from './stores/useAssessmentStore';
 import { useMarketplaceStore } from './stores/useMarketplaceStore';
 import { useBadgeStore } from './stores/useBadgeStore';
 import BadgeNotification from './components/BadgeNotification';
-import { fetchSharedStateBootstrap } from './lib/sharedStateClient';
+import { fetchSharedStateBootstrap, flushPendingSharedStateSaves } from './lib/sharedStateClient';
 
 const StudentLoginPage = lazy(() => import('./pages/StudentLoginPage'));
 const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage'));
@@ -58,6 +58,7 @@ export default function App() {
         ]);
 
         await useAuthStore.getState().loadSubAdminsFromServer?.();
+        await useAuthStore.getState().loadStudentsFromServer?.();
 
         const sharedState = await fetchSharedStateBootstrap();
 
@@ -89,8 +90,16 @@ export default function App() {
 
     bootstrapSharedState();
 
+    const handlePageHide = () => {
+      void flushPendingSharedStateSaves();
+    };
+
+    window.addEventListener('pagehide', handlePageHide);
+
     return () => {
       isMounted = false;
+      window.removeEventListener('pagehide', handlePageHide);
+      void flushPendingSharedStateSaves();
     };
   }, []);
 

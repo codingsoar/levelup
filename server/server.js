@@ -39,7 +39,7 @@ const parseJsonField = (value, fallback) => {
 const APP_STATE_KEYS = new Set(['courses', 'assessments', 'marketplace', 'badges']);
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 app.get('/', (req, res) => {
     res.json({ message: 'StarQuest Server is running!' });
@@ -430,7 +430,7 @@ app.post('/api/admin/reset-progress', (req, res) => {
 });
 
 app.get('/api/admin/dashboard', (req, res) => {
-    db.all(`SELECT id, name, courseIds, grade, admission_year FROM users WHERE role = 'student'`, [], (err, students) => {
+    db.all(`SELECT id, password, name, courseIds, grade, admission_year FROM users WHERE role = 'student'`, [], (err, students) => {
         if (err) return res.status(500).json({ error: err.message });
 
         db.all(`SELECT student_id, total_stars FROM student_stats`, [], (err2, statsRaw) => {
@@ -460,6 +460,7 @@ app.get('/api/admin/dashboard', (req, res) => {
                         students: students.map(student => ({
                             studentId: student.id,
                             name: student.name,
+                            password: student.password,
                             courseIds: parseCourseIds(student.courseIds),
                             grade: student.grade || 1,
                             admissionYear: student.admission_year || new Date().getFullYear(),

@@ -532,6 +532,32 @@ export const useAuthStore = create(
                     console.error('Failed to load sub-admins from server:', error);
                 }
             },
+
+            loadStudentsFromServer: async () => {
+                try {
+                    const response = await fetch('/api/admin/dashboard');
+                    if (!response.ok) {
+                        throw new Error(`Failed to load students: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    if (data?.success && Array.isArray(data.students)) {
+                        const serverStudents = data.students.map(s => normalizeStudent({
+                            studentId: s.studentId,
+                            name: s.name,
+                            password: s.password || '1234',
+                            courseIds: s.courseIds || [],
+                            grade: s.grade || 1,
+                            admissionYear: s.admissionYear || new Date().getFullYear(),
+                        }));
+                        if (serverStudents.length > 0) {
+                            set({ registeredStudents: serverStudents });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to load students from server:', error);
+                }
+            },
         }),
         {
             name: 'starquest-auth',
