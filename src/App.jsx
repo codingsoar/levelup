@@ -70,14 +70,13 @@ export default function App() {
         await useAuthStore.getState().loadSubAdminsFromServer?.();
         await useAuthStore.getState().loadStudentsFromServer?.();
 
-        const sharedState = await fetchSharedStateBootstrap();
-
-        if (Object.prototype.hasOwnProperty.call(sharedState, 'courses')) {
-          useStageStore.getState().applyServerState?.(sharedState.courses);
-        } else if (hasCustomCourseState(useStageStore.getState().courses)) {
+        const coursesLoadResult = await useStageStore.getState().loadCoursesFromServer?.();
+        if (!coursesLoadResult?.loaded && hasCustomCourseState(useStageStore.getState().courses)) {
           await saveSharedStateNow('courses', useStageStore.getState().courses);
         }
         useStageStore.getState().enableServerSync?.();
+
+        const sharedState = await fetchSharedStateBootstrap();
 
         if (Object.prototype.hasOwnProperty.call(sharedState, 'assessments')) {
           useAssessmentStore.getState().applyServerState?.(sharedState.assessments);

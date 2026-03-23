@@ -1838,3 +1838,36 @@ pm run build -> Success
 
 ### Notes
 - This closes the gap where class data could remain only in one device's local IndexedDB instead of becoming authoritative on the shared server.
+
+## 2026-03-23 - Server-Authoritative Course Sync Hardening
+
+### Request
+- Continue to the next step because class changes still did not appear to reflect reliably across devices after redeploy.
+
+### Scope
+- Course sync path between frontend bootstrap/store mutations and backend persistence.
+- No unrelated UI changes.
+
+### Implemented
+- Added dedicated backend endpoints: GET /api/courses and PUT /api/courses backed by the shared pp_state table.
+- Updated app bootstrap to load classes from /api/courses before enabling course sync.
+- Updated useStageStore so class and stage mutations push the full course state directly to /api/courses, with shared-state save as fallback.
+- Kept bootstrap backfill behavior for the case where the server still has no course state but the current device has non-sample course data.
+
+### Validation
+- 
+px eslint src\App.jsx src\stores\useStageStore.js src\lib\sharedStateClient.js -> Success
+- 
+ode --check server\server.js -> Success
+- 
+pm run build -> Success
+
+### Files
+- server/server.js
+- src/App.jsx
+- src/stores/useStageStore.js
+- src/lib/sharedStateClient.js
+- ANTIGRAVITY_WORKLOG.md
+
+### Notes
+- This reduces dependence on passive debounced shared-state writes by routing class reads/writes through a dedicated API path.

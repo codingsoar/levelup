@@ -98,6 +98,45 @@ app.get('/api/app-state', (req, res) => {
     });
 });
 
+app.get('/api/courses', (req, res) => {
+    db.get(`SELECT value FROM app_state WHERE key = 'courses'`, [], (err, row) => {
+        if (err) {
+            return res.status(500).json({ success: false, error: err.message });
+        }
+
+        return res.json({
+            success: true,
+            courses: parseJsonField(row?.value, null),
+        });
+    });
+});
+
+app.put('/api/courses', (req, res) => {
+    const { courses } = req.body || {};
+
+    if (!Array.isArray(courses)) {
+        return res.status(400).json({ success: false, message: 'Invalid courses payload' });
+    }
+
+    db.run(
+        `
+            INSERT INTO app_state (key, value, updated_at)
+            VALUES ('courses', ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                updated_at = CURRENT_TIMESTAMP
+        `,
+        [JSON.stringify(courses)],
+        (err) => {
+            if (err) {
+                return res.status(500).json({ success: false, error: err.message });
+            }
+
+            return res.json({ success: true, count: courses.length });
+        }
+    );
+});
+
 app.put('/api/app-state/:key', (req, res) => {
     const { key } = req.params;
     const { value } = req.body || {};
