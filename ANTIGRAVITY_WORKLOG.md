@@ -1718,3 +1718,123 @@ pm run build (escalated) -> Success
 
 ### Notes
 - The pushed content includes the current uncommitted student sync/shared-state changes already present in the workspace.
+
+## 2026-03-23 - Deployment Accessibility Review
+
+### Request
+- Review the current deployed file state because the website stopped opening after upload and restart on the Ubuntu server.
+
+### Scope
+- Read-only review of deployment-related files and current runtime entry points.
+- No product code changes.
+
+### Implemented
+- Re-checked the shared worklog, git status, and latest deployed commit.
+- Reviewed server/server.js, PM2 config, Nginx example, deploy scripts, and Ubuntu deployment guide.
+- Identified likely deployment blockers in the current configuration.
+
+### Validation
+- git status --short --branch -> Success
+- 
+ode --check server/server.js -> Success
+- 
+ode --check server/database.js -> Success
+- 
+pm run build -> Previously validated success for current deployed commit
+
+### Files
+- server/server.js
+- server/ecosystem.config.js
+- server/nginx.conf.example
+- server/start-prod.sh
+- server/restart-prod.sh
+- DEPLOY_UBUNTU.md
+- ANTIGRAVITY_WORKLOG.md
+
+### Notes
+- Likely cause is deployment configuration mismatch rather than a frontend build regression: the API server does not serve the SPA itself, and deployment assets assume /var/www/starquest specifically.
+
+## 2026-03-23 - Seed Missing Shared Course State On Bootstrap
+
+### Request
+- Fix the issue where students on other computers could log in but saw no assigned classes even though the admin-configured computer showed them.
+
+### Scope
+- App bootstrap shared-state hydration for cross-device data.
+- No page layout redesign.
+
+### Implemented
+- Added saveSharedStateNow() to push shared state immediately without waiting for the debounce queue.
+- Updated app bootstrap so that when the server has no stored shared state for courses, ssessments, marketplace, or adges, the current local persisted state is seeded to the server.
+- Preserved the existing server-first behavior when shared state already exists remotely.
+
+### Validation
+- 
+px eslint src\App.jsx src\lib\sharedStateClient.js -> Success
+- 
+pm run build -> Success
+
+### Files
+- src/App.jsx
+- src/lib/sharedStateClient.js
+- ANTIGRAVITY_WORKLOG.md
+
+### Notes
+- Root cause was a migration gap: older admin-managed local IndexedDB state could remain only on the original device if the server had never received an initial pp_state row for courses.
+
+## 2026-03-23 - Course State Backfill Guard
+
+### Request
+- Prevent other devices from showing an empty class list when only the original admin device still had the custom class data locally.
+
+### Scope
+- Shared course bootstrap behavior only.
+- No changes to assessment, marketplace, or badge bootstrap rules.
+
+### Implemented
+- Restricted the immediate bootstrap backfill logic to courses only.
+- Added a guard so backfill runs only when the local course state differs from the built-in sample course dataset.
+- Kept normal server-first hydration unchanged when remote course state already exists.
+
+### Validation
+- 
+px eslint src\App.jsx src\lib\sharedStateClient.js -> Success
+- 
+pm run build -> Success
+
+### Files
+- src/App.jsx
+- src/lib/sharedStateClient.js
+- ANTIGRAVITY_WORKLOG.md
+
+### Notes
+- This avoids a fresh device with default sample data seeding the server with placeholder courses when the remote course state is still missing.
+
+## 2026-03-23 - Real-Time Course Sync For Cross-Device Admin Changes
+
+### Request
+- Make admin class changes persist to the server from any computer so students on other computers can immediately see and access their classes.
+
+### Scope
+- Shared course sync behavior in app bootstrap and stage store mutations.
+- No unrelated UI changes.
+
+### Implemented
+- Added immediate shared-state save support via saveSharedStateNow().
+- Added bootstrap backfill for courses when the server has no course state yet but the local device has non-sample course data.
+- Updated useStageStore class/stage mutation actions to push courses to the server immediately whenever an admin changes course data after server sync is enabled.
+
+### Validation
+- 
+px eslint src\App.jsx src\lib\sharedStateClient.js src\stores\useStageStore.js -> Success
+- 
+pm run build -> Success
+
+### Files
+- src/App.jsx
+- src/lib/sharedStateClient.js
+- src/stores/useStageStore.js
+- ANTIGRAVITY_WORKLOG.md
+
+### Notes
+- This closes the gap where class data could remain only in one device's local IndexedDB instead of becoming authoritative on the shared server.

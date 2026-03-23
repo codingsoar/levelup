@@ -7,8 +7,13 @@ import { useStageStore } from './stores/useStageStore';
 import { useAssessmentStore } from './stores/useAssessmentStore';
 import { useMarketplaceStore } from './stores/useMarketplaceStore';
 import { useBadgeStore } from './stores/useBadgeStore';
+import { sampleCourses } from './data/sampleCourses';
 import BadgeNotification from './components/BadgeNotification';
-import { fetchSharedStateBootstrap, flushPendingSharedStateSaves } from './lib/sharedStateClient';
+import {
+  fetchSharedStateBootstrap,
+  flushPendingSharedStateSaves,
+  saveSharedStateNow,
+} from './lib/sharedStateClient';
 
 const StudentLoginPage = lazy(() => import('./pages/StudentLoginPage'));
 const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage'));
@@ -26,6 +31,11 @@ function AppLoadingFallback() {
       </div>
     </div>
   );
+}
+
+function hasCustomCourseState(courses) {
+  if (!Array.isArray(courses)) return false;
+  return JSON.stringify(courses) !== JSON.stringify(sampleCourses);
 }
 
 function ProtectedRoute({ children, adminOnly }) {
@@ -64,6 +74,8 @@ export default function App() {
 
         if (Object.prototype.hasOwnProperty.call(sharedState, 'courses')) {
           useStageStore.getState().applyServerState?.(sharedState.courses);
+        } else if (hasCustomCourseState(useStageStore.getState().courses)) {
+          await saveSharedStateNow('courses', useStageStore.getState().courses);
         }
         useStageStore.getState().enableServerSync?.();
 

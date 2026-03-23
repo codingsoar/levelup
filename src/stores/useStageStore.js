@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
 import { sampleCourses } from '../data/sampleCourses';
-import { scheduleSharedStateSave } from '../lib/sharedStateClient';
+import { saveSharedStateNow, scheduleSharedStateSave } from '../lib/sharedStateClient';
 
 // IndexedDB storage adapter for large data (no 5MB localStorage limit)
 const indexedDBStorage = {
@@ -16,6 +16,15 @@ const indexedDBStorage = {
     removeItem: async (name) => {
         await idbDel(name);
     },
+};
+
+const syncCoursesToServerNow = (get) => {
+    if (!get().serverSyncReady) return;
+
+    const courses = get().courses;
+    void saveSharedStateNow('courses', courses).catch((error) => {
+        console.error('Failed to sync courses to server immediately:', error);
+    });
 };
 
 export const useStageStore = create(
@@ -33,16 +42,19 @@ export const useStageStore = create(
 
             addCourse: (course) => {
                 set(state => ({ courses: [...state.courses, course] }));
+                syncCoursesToServerNow(get);
             },
 
             updateCourse: (courseId, updates) => {
                 set(state => ({
                     courses: state.courses.map(c => c.id === courseId ? { ...c, ...updates } : c),
                 }));
+                syncCoursesToServerNow(get);
             },
 
             deleteCourse: (courseId) => {
                 set(state => ({ courses: state.courses.filter(c => c.id !== courseId) }));
+                syncCoursesToServerNow(get);
             },
 
             addStage: (courseId, stage) => {
@@ -51,6 +63,7 @@ export const useStageStore = create(
                         c.id === courseId ? { ...c, stages: [...c.stages, stage] } : c
                     ),
                 }));
+                syncCoursesToServerNow(get);
             },
 
             updateStage: (courseId, stageId, updates) => {
@@ -61,6 +74,7 @@ export const useStageStore = create(
                             : c
                     ),
                 }));
+                syncCoursesToServerNow(get);
             },
 
             deleteStage: (courseId, stageId) => {
@@ -71,6 +85,7 @@ export const useStageStore = create(
                             : c
                     ),
                 }));
+                syncCoursesToServerNow(get);
             },
 
             applyServerState: (courses) => {

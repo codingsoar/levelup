@@ -22,6 +22,16 @@ async function putSharedState(key, value, options = {}) {
     }
 }
 
+export async function saveSharedStateNow(key, value, options = {}) {
+    if (!key) return;
+    await putSharedState(key, cloneValue(value), options);
+    pendingPayloads.delete(key);
+    if (pendingTimers.has(key)) {
+        clearTimeout(pendingTimers.get(key));
+        pendingTimers.delete(key);
+    }
+}
+
 export async function fetchSharedStateBootstrap() {
     try {
         const response = await fetch(SHARED_STATE_ENDPOINT);
