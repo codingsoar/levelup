@@ -1956,3 +1956,52 @@ pm run build -> Success
 
 ### Notes
 - Commit contents are limited to the current `/api/courses` rollback/bootstrap fix and the PM2 config adjustment already present in the workspace.
+## 2026-03-26 - Student Class Visibility Sync Fix
+
+### Request
+- Fix the issue where a student login did not show classes created/assigned by the admin.
+
+### Scope
+- Student auth state synchronization.
+- Student dashboard/profile/layout class visibility fallback.
+
+### Implemented
+- Added `syncCurrentStudentUser` in `useAuthStore` so the logged-in student `user` object stays aligned with updated `registeredStudents` records.
+- Applied that sync path to student load/update/enroll/unenroll/add-to-course/remove-from-course flows.
+- Updated student-facing screens to derive assigned class IDs from the matching `registeredStudents` record first, with `user.courseIds` as fallback.
+
+### Validation
+- `npx eslint src\stores\useAuthStore.js src\components\StudentLayout.jsx src\pages\StudentDashboardPage.jsx src\pages\StudentProfilePage.jsx` -> Success
+
+### Files
+- `src\stores\useAuthStore.js`
+- `src\components\StudentLayout.jsx`
+- `src\pages\StudentDashboardPage.jsx`
+- `src\pages\StudentProfilePage.jsx`
+
+### Notes
+- Root cause was stale student session state: admin enrollment updated `registeredStudents`, but the logged-in student `user.courseIds` could remain outdated until re-login.
+## 2026-03-26 - Push Student Class Visibility Fix
+
+### Request
+- Commit the student class visibility fix and push `main` to `origin`.
+
+### Scope
+- Git state management and remote sync for the student class visibility fix.
+- No new product behavior changes beyond the already modified files.
+
+### Implemented
+- Reviewed current status and the latest worklog entries before sync.
+- Recorded the push handoff for the student class visibility fix.
+- Prepared the current workspace changes for commit and push.
+
+### Validation
+- `git status --short --branch` -> Success
+- `git commit -m "Fix student class visibility after enrollment sync"` -> Pending
+- `git push origin main` -> Pending
+
+### Files
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Commit contents are limited to the student auth/course visibility sync fix and the related worklog update.

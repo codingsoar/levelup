@@ -57,6 +57,19 @@ const applySubAdminLogin = (set, subAdmin) => {
     });
 };
 
+const syncCurrentStudentUser = (state, student) => {
+    if (state.user?.role !== 'student') return {};
+    if (state.user.studentId !== student.studentId) return {};
+
+    return {
+        user: {
+            ...state.user,
+            ...normalizeStudent(student),
+            role: 'student',
+        },
+    };
+};
+
 const syncStudentToServer = async (student) => {
     try {
         await fetch('/api/admin/students/upsert', {
@@ -194,8 +207,16 @@ export const useAuthStore = create(
 
             logout: () => set({ user: null, isAdmin: false }),
 
-            setAllStudents: (students) => set({
-                registeredStudents: (students || []).map(normalizeStudent)
+            setAllStudents: (students) => set((state) => {
+                const normalizedStudents = (students || []).map(normalizeStudent);
+                const currentStudent = normalizedStudents.find(
+                    (student) => student.studentId === state.user?.studentId
+                );
+
+                return {
+                    registeredStudents: normalizedStudents,
+                    ...(currentStudent ? syncCurrentStudentUser(state, currentStudent) : {}),
+                };
             }),
 
             changeAdminPassword: async (currentPassword, newPassword) => {
@@ -272,13 +293,19 @@ export const useAuthStore = create(
             },
 
             enrollStudent: (studentId, courseId) => {
-                set(state => ({
-                    registeredStudents: state.registeredStudents.map(s =>
+                set(state => {
+                    const registeredStudents = state.registeredStudents.map(s =>
                         s.studentId === studentId && !s.courseIds.includes(courseId)
                             ? { ...s, courseIds: [...s.courseIds, courseId] }
                             : s
-                    )
-                }));
+                    );
+                    const updatedStudent = registeredStudents.find(student => student.studentId === studentId);
+
+                    return {
+                        registeredStudents,
+                        ...(updatedStudent ? syncCurrentStudentUser(state, updatedStudent) : {}),
+                    };
+                });
                 const updatedStudent = get().registeredStudents.find(student => student.studentId === studentId);
                 if (updatedStudent) {
                     syncStudentToServer(normalizeStudent(updatedStudent));
@@ -286,13 +313,19 @@ export const useAuthStore = create(
             },
 
             unenrollStudent: (studentId, courseId) => {
-                set(state => ({
-                    registeredStudents: state.registeredStudents.map(s =>
+                set(state => {
+                    const registeredStudents = state.registeredStudents.map(s =>
                         s.studentId === studentId
                             ? { ...s, courseIds: s.courseIds.filter(id => id !== courseId) }
                             : s
-                    )
-                }));
+                    );
+                    const updatedStudent = registeredStudents.find(student => student.studentId === studentId);
+
+                    return {
+                        registeredStudents,
+                        ...(updatedStudent ? syncCurrentStudentUser(state, updatedStudent) : {}),
+                    };
+                });
                 const updatedStudent = get().registeredStudents.find(student => student.studentId === studentId);
                 if (updatedStudent) {
                     syncStudentToServer(normalizeStudent(updatedStudent));
@@ -340,11 +373,17 @@ export const useAuthStore = create(
             },
 
             updateStudent: (studentId, updates) => {
-                set(state => ({
-                    registeredStudents: state.registeredStudents.map(s =>
+                set(state => {
+                    const registeredStudents = state.registeredStudents.map(s =>
                         s.studentId === studentId ? { ...s, ...updates } : s
-                    )
-                }));
+                    );
+                    const updatedStudent = registeredStudents.find(student => student.studentId === studentId);
+
+                    return {
+                        registeredStudents,
+                        ...(updatedStudent ? syncCurrentStudentUser(state, updatedStudent) : {}),
+                    };
+                });
                 const updatedStudent = get().registeredStudents.find(student => student.studentId === studentId);
                 if (updatedStudent) {
                     syncStudentToServer(normalizeStudent(updatedStudent));
@@ -369,27 +408,31 @@ export const useAuthStore = create(
                 set(state => {
                     const currentStudents = state.registeredStudents.map(normalizeStudent);
                     const foundIndex = currentStudents.findIndex(s => s.studentId === normalizedStudentId);
+                    let registeredStudents;
 
                     if (foundIndex === -1) {
-                        return {
-                            registeredStudents: [
-                                ...currentStudents,
-                                { studentId: normalizedStudentId, name: normalizedName, password: normalizedPassword, courseIds: [courseId] },
-                            ],
-                        };
-                    }
+                        registeredStudents = [
+                            ...currentStudents,
+                            { studentId: normalizedStudentId, name: normalizedName, password: normalizedPassword, courseIds: [courseId] },
+                        ];
+                    } else {
+                        const foundStudent = currentStudents[foundIndex];
+                        const nextCourseIds = foundStudent.courseIds.includes(courseId)
+                            ? foundStudent.courseIds
+                            : [...foundStudent.courseIds, courseId];
 
-                    const foundStudent = currentStudents[foundIndex];
-                    const nextCourseIds = foundStudent.courseIds.includes(courseId)
-                        ? foundStudent.courseIds
-                        : [...foundStudent.courseIds, courseId];
-
-                    return {
-                        registeredStudents: currentStudents.map((student, index) =>
+                        registeredStudents = currentStudents.map((student, index) =>
                             index === foundIndex
                                 ? { ...student, password: normalizedPassword || student.password, courseIds: nextCourseIds }
                                 : student
-                        ),
+                        );
+                    }
+
+                    const updatedStudent = registeredStudents.find(student => student.studentId === normalizedStudentId);
+
+                    return {
+                        registeredStudents,
+                        ...(updatedStudent ? syncCurrentStudentUser(state, updatedStudent) : {}),
                     };
                 });
 
@@ -403,16 +446,22 @@ export const useAuthStore = create(
 
             removeStudentFromCourse: (courseId, studentId) => {
                 if (!courseId || !studentId) return;
-                set(state => ({
-                    registeredStudents: state.registeredStudents
+                set(state => {
+                    const registeredStudents = state.registeredStudents
                         .map(normalizeStudent)
                         .map(student =>
                             student.studentId === studentId
                                 ? { ...student, courseIds: student.courseIds.filter(id => id !== courseId) }
                                 : student
                         )
-                        .filter(student => student.courseIds.length > 0),
-                }));
+                        .filter(student => student.courseIds.length > 0);
+                    const updatedStudent = registeredStudents.find(student => student.studentId === studentId);
+
+                    return {
+                        registeredStudents,
+                        ...(updatedStudent ? syncCurrentStudentUser(state, updatedStudent) : {}),
+                    };
+                });
                 const updatedStudent = get().registeredStudents.find(student => student.studentId === studentId);
                 if (updatedStudent) {
                     syncStudentToServer(normalizeStudent(updatedStudent));
@@ -550,9 +599,16 @@ export const useAuthStore = create(
                             grade: s.grade || 1,
                             admissionYear: s.admissionYear || new Date().getFullYear(),
                         }));
-                        if (serverStudents.length > 0) {
-                            set({ registeredStudents: serverStudents });
-                        }
+                        set((state) => {
+                            const currentStudent = serverStudents.find(
+                                (student) => student.studentId === state.user?.studentId
+                            );
+
+                            return {
+                                registeredStudents: serverStudents,
+                                ...(currentStudent ? syncCurrentStudentUser(state, currentStudent) : {}),
+                            };
+                        });
                     }
                 } catch (error) {
                     console.error('Failed to load students from server:', error);

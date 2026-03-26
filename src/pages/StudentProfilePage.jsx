@@ -13,16 +13,20 @@ export default function StudentProfilePage() {
     const { progress, totalStars } = useProgressStore();
     const getUnlockedBadges = useBadgeStore(state => state.getUnlockedBadges);
     const getAllBadges = useBadgeStore(state => state.getAllBadges);
+    const currentStudent = useMemo(
+        () => registeredStudents.find((student) => student.studentId === user?.studentId),
+        [registeredStudents, user?.studentId]
+    );
 
     const studentStars = totalStars[user?.studentId] || 0;
     const unlockedBadges = getUnlockedBadges(user?.studentId);
     const allBadges = getAllBadges();
     const visibleCourses = useMemo(
         () => {
-            const assignedCourseIds = user?.courseIds || [];
+            const assignedCourseIds = currentStudent?.courseIds || user?.courseIds || [];
             return courses.filter(course => assignedCourseIds.includes(course.id));
         },
-        [courses, user?.courseIds]
+        [courses, currentStudent?.courseIds, user?.courseIds]
     );
 
     // Rank from leaderboard

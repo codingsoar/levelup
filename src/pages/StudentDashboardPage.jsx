@@ -15,9 +15,13 @@ export default function StudentDashboardPage() {
     const { getStudentProgress, totalStars, getStudentReflections, fetchProgress } = useProgressStore();
     const { courses } = useStageStore();
     const isDark = useThemeStore(state => state.isDark);
+    const currentStudent = useMemo(
+        () => registeredStudents.find((student) => student.studentId === user?.studentId),
+        [registeredStudents, user?.studentId]
+    );
     const assignedCourseIds = useMemo(
-        () => user?.courseIds || [],
-        [user?.courseIds]
+        () => currentStudent?.courseIds || user?.courseIds || [],
+        [currentStudent?.courseIds, user?.courseIds]
     );
     const myCourses = useMemo(
         () => courses.filter(course => assignedCourseIds.includes(course.id)),

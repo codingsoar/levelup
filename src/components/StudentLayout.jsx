@@ -7,11 +7,12 @@ import useThemeStore from '../stores/useThemeStore';
 export default function StudentLayout({ children, activeTab: propActiveTab }) {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user, logout } = useAuthStore();
+    const { user, logout, registeredStudents } = useAuthStore();
     const { courses } = useStageStore();
     const isDark = useThemeStore(state => state.isDark);
 
-    const assignedCourseIds = user?.courseIds || [];
+    const currentStudent = registeredStudents.find((student) => student.studentId === user?.studentId);
+    const assignedCourseIds = currentStudent?.courseIds || user?.courseIds || [];
     const myClasses = courses.filter(c => assignedCourseIds.includes(c.id));
 
     const { getStudentReflections } = useProgressStore();
