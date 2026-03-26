@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
 import { sampleCourses } from '../data/sampleCourses';
-import { saveSharedStateNow, scheduleSharedStateSave } from '../lib/sharedStateClient';
+import { scheduleSharedStateSave } from '../lib/sharedStateClient';
 
 // IndexedDB storage adapter for large data (no 5MB localStorage limit)
 const indexedDBStorage = {
@@ -17,29 +17,6 @@ const indexedDBStorage = {
         await idbDel(name);
     },
 };
-
-const syncCoursesToServerNow = (get) => {
-    if (!get().serverSyncReady) return;
-
-    const courses = get().courses;
-    void fetch('/api/courses', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courses }),
-    }).then(async (response) => {
-        if (!response.ok) {
-            throw new Error(`Failed to save courses: ${response.status}`);
-        }
-        pendingServerSeed = false;
-    }).catch((error) => {
-        console.error('Failed to sync courses to server immediately:', error);
-        void saveSharedStateNow('courses', courses).catch((fallbackError) => {
-            console.error('Fallback shared-state course sync also failed:', fallbackError);
-        });
-    });
-};
-
-let pendingServerSeed = false;
 
 export const useStageStore = create(
     persist(
@@ -56,19 +33,16 @@ export const useStageStore = create(
 
             addCourse: (course) => {
                 set(state => ({ courses: [...state.courses, course] }));
-                syncCoursesToServerNow(get);
             },
 
             updateCourse: (courseId, updates) => {
                 set(state => ({
                     courses: state.courses.map(c => c.id === courseId ? { ...c, ...updates } : c),
                 }));
-                syncCoursesToServerNow(get);
             },
 
             deleteCourse: (courseId) => {
                 set(state => ({ courses: state.courses.filter(c => c.id !== courseId) }));
-                syncCoursesToServerNow(get);
             },
 
             addStage: (courseId, stage) => {
@@ -77,7 +51,6 @@ export const useStageStore = create(
                         c.id === courseId ? { ...c, stages: [...c.stages, stage] } : c
                     ),
                 }));
-                syncCoursesToServerNow(get);
             },
 
             updateStage: (courseId, stageId, updates) => {
@@ -88,7 +61,6 @@ export const useStageStore = create(
                             : c
                     ),
                 }));
-                syncCoursesToServerNow(get);
             },
 
             deleteStage: (courseId, stageId) => {
@@ -99,7 +71,6 @@ export const useStageStore = create(
                             : c
                     ),
                 }));
-                syncCoursesToServerNow(get);
             },
 
             applyServerState: (courses) => {
@@ -107,34 +78,9 @@ export const useStageStore = create(
                 set({ courses });
             },
 
-            loadCoursesFromServer: async () => {
-                try {
-                    const response = await fetch('/api/courses');
-                    if (!response.ok) {
-                        throw new Error(`Failed to load courses: ${response.status}`);
-                    }
-
-                    const data = await response.json();
-                    if (Array.isArray(data?.courses)) {
-                        pendingServerSeed = false;
-                        set({ courses: data.courses });
-                        return { loaded: true, count: data.courses.length };
-                    }
-                } catch (error) {
-                    console.error('Failed to load courses from server:', error);
-                }
-
-                pendingServerSeed = true;
-                return { loaded: false, count: 0 };
-            },
-
             enableServerSync: () => {
                 if (!get().serverSyncReady) {
                     set({ serverSyncReady: true });
-                }
-
-                if (pendingServerSeed) {
-                    syncCoursesToServerNow(get);
                 }
             },
         }),
