@@ -2196,3 +2196,26 @@ pm run build -> Success
 
 ### Notes
 - This fixes the class-enrollment modal ordering only; it does not change the separate learners management sorting controls.
+
+## 2026-04-13 - Course Student List Sorting Fix
+
+### Request
+- Check why the enrolled student list inside a class was also not sorted after enrollment.
+
+### Scope
+- `CourseEditor` student tab ordering in `src/pages/AdminPage.jsx`.
+- No backend or persistence changes.
+
+### Implemented
+- Confirmed the class student tab previously filtered enrolled students but rendered them in raw store order.
+- Added explicit sorting for enrolled students using the same rule as the enroll modal: grade ascending, admission year descending, then name and student ID.
+
+### Validation
+- `npx eslint src\pages\AdminPage.jsx` -> Success
+
+### Files
+- `src/pages/AdminPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Enroll modal and enrolled-student table now use the same ordering rule, so the before/after enrollment views stay consistent.

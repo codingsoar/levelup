@@ -1477,7 +1477,26 @@ const CourseEditor = ({ course, onBack }) => {
     const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
 
     const enrolledStudents = useMemo(() =>
-        registeredStudents.filter(s => s.courseIds.includes(currentCourse.id))
+        registeredStudents
+            .filter(s => s.courseIds.includes(currentCourse.id))
+            .sort((a, b) => {
+                const gradeCompare = (a.grade || 0) - (b.grade || 0);
+                if (gradeCompare !== 0) return gradeCompare;
+
+                const yearCompare = (b.admissionYear || 0) - (a.admissionYear || 0);
+                if (yearCompare !== 0) return yearCompare;
+
+                const nameCompare = (a.name || '').localeCompare(b.name || '', 'ko', {
+                    numeric: true,
+                    sensitivity: 'base',
+                });
+                if (nameCompare !== 0) return nameCompare;
+
+                return (a.studentId || '').localeCompare(b.studentId || '', 'ko', {
+                    numeric: true,
+                    sensitivity: 'base',
+                });
+            })
         , [registeredStudents, currentCourse.id]);
 
     const handleEnrollStudents = (studentIds) => {
