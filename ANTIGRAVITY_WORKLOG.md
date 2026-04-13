@@ -2173,3 +2173,26 @@ pm run build -> Success
 ### Notes
 - Whole-backup replace restore now keeps original course IDs from the backup when possible, which allows existing student course assignments to remain attached after restore if the backup originated from the same deployment lineage.
 - If the backup contains missing or duplicate IDs, new IDs are generated only for those conflicting entries.
+
+## 2026-04-13 - Enroll Modal Grade Sorting Fix
+
+### Request
+- Check why student ordering looked wrong by grade when enrolling students into a class.
+
+### Scope
+- Student ordering in `EnrollStudentModal` within `src/pages/AdminPage.jsx`.
+- No backend or persistence changes.
+
+### Implemented
+- Confirmed the enroll modal previously only filtered available students and rendered them in raw registration order.
+- Added explicit sorting for available students: grade ascending, admission year descending, then name and student ID as tie-breakers.
+
+### Validation
+- `npx eslint src\pages\AdminPage.jsx` -> Success
+
+### Files
+- `src/pages/AdminPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- This fixes the class-enrollment modal ordering only; it does not change the separate learners management sorting controls.

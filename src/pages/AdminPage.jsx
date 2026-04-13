@@ -1363,7 +1363,26 @@ const EnrollStudentModal = ({ isOpen, onClose, courseId, onEnroll }) => {
 
     // Filter students NOT already enrolled in this course
     const availableStudents = useMemo(() =>
-        registeredStudents.filter(s => !s.courseIds.includes(courseId))
+        registeredStudents
+            .filter(s => !s.courseIds.includes(courseId))
+            .sort((a, b) => {
+                const gradeCompare = (a.grade || 0) - (b.grade || 0);
+                if (gradeCompare !== 0) return gradeCompare;
+
+                const yearCompare = (b.admissionYear || 0) - (a.admissionYear || 0);
+                if (yearCompare !== 0) return yearCompare;
+
+                const nameCompare = (a.name || '').localeCompare(b.name || '', 'ko', {
+                    numeric: true,
+                    sensitivity: 'base',
+                });
+                if (nameCompare !== 0) return nameCompare;
+
+                return (a.studentId || '').localeCompare(b.studentId || '', 'ko', {
+                    numeric: true,
+                    sensitivity: 'base',
+                });
+            })
         , [registeredStudents, courseId]);
 
     const handleToggle = (studentId) => {
