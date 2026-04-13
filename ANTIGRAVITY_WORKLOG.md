@@ -2005,3 +2005,171 @@ pm run build -> Success
 
 ### Notes
 - Commit contents are limited to the student auth/course visibility sync fix and the related worklog update.
+
+## 2026-04-13 - Server Update Readiness Analysis
+
+### Request
+- Analyze whether the current project can be used by setting up the server now.
+- Confirm whether it is safe to modify and update the current workspace.
+
+### Scope
+- Read-only review of current repository state, server/deployment files, and baseline validation commands.
+- No product code changes; only this handoff log was updated.
+
+### Implemented
+- Re-read the shared worklog and current git status before analysis.
+- Reviewed current frontend/backend/deployment files: root `package.json`, `server/package.json`, `DEPLOY_UBUNTU.md`, `server/ecosystem.config.js`, and `server/server.js`.
+- Verified current code paths for shared-state sync in `src/App.jsx`, `src/stores/useStageStore.js`, and `src/lib/sharedStateClient.js`.
+- Re-ran lint, backend syntax checks, and production build verification.
+
+### Validation
+- `git status --short --branch` -> Success (`main...origin/main`, no working-tree changes before logging)
+- `npm run lint` -> Success
+- `node --check server\\server.js` -> Success
+- `node --check server\\database.js` -> Success
+- `npm run build` -> Failed in sandbox (`spawn EPERM`)
+- `npm run build` (escalated) -> Success
+
+### Files
+- `package.json`
+- `server/package.json`
+- `DEPLOY_UBUNTU.md`
+- `server/ecosystem.config.js`
+- `server/server.js`
+- `src/App.jsx`
+- `src/stores/useStageStore.js`
+- `src/lib/sharedStateClient.js`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Current workspace is clean and aligned with `origin/main`, so it is safe to continue edits from the present state.
+- Project structure already includes a deployable frontend build, Express API server, SQLite database, PM2 config, and Ubuntu deployment guide.
+- One implementation/history mismatch remains: the worklog says `/api/courses` was removed in a prior fix, but the current `server/server.js` still defines `/api/courses` endpoints while the current frontend course sync path uses `/api/app-state`. This does not block deployment, but it should be normalized in a future cleanup to keep the handoff record accurate.
+
+## 2026-04-13 - Learners Sorting Control
+
+### Request
+- Add ascending/descending sorting for registered students in the admin learners page.
+
+### Scope
+- Learners list filtering/sorting UI in `src/pages/AdminPage.jsx` only.
+- No student persistence or backend changes.
+
+### Implemented
+- Added a sort selector to the learners filter bar.
+- Applied name-based ascending/descending sorting after the existing year/grade filters.
+- Added student ID as a deterministic fallback when names are identical.
+
+### Validation
+- `npx eslint src\pages\AdminPage.jsx` -> Success
+
+### Files
+- `src/pages/AdminPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Sorting currently uses student name (`Name Asc` / `Name Desc`) rather than registration timestamp because the current learner records do not expose a dedicated created-at field in this view.
+
+## 2026-04-13 - Class Backup And Reuse Controls
+
+### Request
+- Let admins reuse course materials for a new year, download backups, upload backups, and continue editing copied content.
+
+### Scope
+- `Class Management` UI in `src/pages/AdminPage.jsx`.
+- No backend or database schema changes.
+
+### Implemented
+- Added class duplication support from the class action menu.
+- Added per-class JSON backup download support.
+- Added class backup JSON import support from the class management header.
+- Cloned imported/duplicated classes with fresh course/stage IDs so copied content can be edited independently.
+
+### Validation
+- `npx eslint src\pages\AdminPage.jsx` -> Success
+
+### Files
+- `src/pages/AdminPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Backup/import currently targets one class per JSON file using the shape `{ version, exportedAt, course }`.
+- Duplicated classes are created as a separate editable copy and keep missions/stages content while resetting course/stage identifiers.
+
+## 2026-04-13 - Class Editing And Full Backup Controls
+
+### Request
+- Implement both requested follow-ups: real class editing and whole-class-set backup/import support.
+
+### Scope
+- `Class Management` flows in `src/pages/AdminPage.jsx`.
+- No backend or database schema changes.
+
+### Implemented
+- Connected `Edit Class` to the class modal so admins can update class title and description.
+- Added whole-class-set backup download as a JSON file containing `courses`.
+- Extended backup import to accept both single-class backups (`course`) and whole-class-set backups (`courses`).
+- Kept imports additive and safe by creating imported copies instead of overwriting existing classes.
+
+### Validation
+- `npx eslint src\pages\AdminPage.jsx` -> Success
+
+### Files
+- `src/pages/AdminPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Full backup import currently appends imported class copies rather than replacing current data, to avoid destructive restores from the admin UI.
+- Imported and duplicated classes remain independently editable after creation.
+
+## 2026-04-13 - Class Restore Replace Mode And Theme Editing
+
+### Request
+- Continue the class backup workflow by adding replace-restore support and expanding class editing to cover icon and theme values.
+
+### Scope
+- `Class Management` UI in `src/pages/AdminPage.jsx`.
+- Course store action extension in `src/stores/useStageStore.js`.
+
+### Implemented
+- Added `replaceCourses` to the stage store for whole-course-set replacement.
+- Expanded class create/edit modal to edit icon, primary color, accent color, and background pattern.
+- Extended full backup import so admins can choose between replacing current classes or importing copies.
+- Normalized restored classes with fresh IDs before applying replacement, keeping the dataset internally consistent.
+
+### Validation
+- `npx eslint src\pages\AdminPage.jsx src\stores\useStageStore.js` -> Success
+
+### Files
+- `src/pages/AdminPage.jsx`
+- `src/stores/useStageStore.js`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Whole-backup restore now uses a confirmation dialog: `OK` replaces the current class set, `Cancel` imports backup contents as additional copies.
+- Replace-restore changes only class/curriculum data; student enrollment stays attached to whichever course IDs remain after the restore.
+
+## 2026-04-13 - Backup Restore ID Preservation
+
+### Request
+- Adjust full class restore so student enrollment can remain aligned when restoring from a backup created from the same system.
+
+### Scope
+- Full class restore normalization in `src/pages/AdminPage.jsx`.
+- No backend or schema changes.
+
+### Implemented
+- Changed replace-restore normalization to preserve backed-up course IDs when they are present and unique.
+- Preserved backed-up stage IDs during replace-restore where possible, generating new IDs only for missing or duplicate values.
+- Kept copy-import behavior unchanged so additive imports still create independent duplicated classes.
+
+### Validation
+- `npx eslint src\pages\AdminPage.jsx src\stores\useStageStore.js` -> Success
+
+### Files
+- `src/pages/AdminPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Whole-backup replace restore now keeps original course IDs from the backup when possible, which allows existing student course assignments to remain attached after restore if the backup originated from the same deployment lineage.
+- If the backup contains missing or duplicate IDs, new IDs are generated only for those conflicting entries.

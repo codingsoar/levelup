@@ -35,6 +35,10 @@ export const useStageStore = create(
                 set(state => ({ courses: [...state.courses, course] }));
             },
 
+            replaceCourses: (courses) => {
+                set({ courses: Array.isArray(courses) ? courses : [] });
+            },
+
             updateCourse: (courseId, updates) => {
                 set(state => ({
                     courses: state.courses.map(c => c.id === courseId ? { ...c, ...updates } : c),

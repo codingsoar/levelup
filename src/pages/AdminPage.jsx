@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -417,15 +417,27 @@ const LearnersManagement = ({ registeredStudents, onAddStudent, onDeleteStudent,
     // Filters
     const [filterGrade, setFilterGrade] = useState('all');
     const [filterYear, setFilterYear] = useState('all');
+    const [sortOrder, setSortOrder] = useState('asc');
 
     // Filter Logic
     const filteredStudents = useMemo(() => {
-        return registeredStudents.filter(student => {
+        const visibleStudents = registeredStudents.filter(student => {
             const gradeMatch = filterGrade === 'all' || student.grade === parseInt(filterGrade);
             const yearMatch = filterYear === 'all' || student.admissionYear === parseInt(filterYear);
             return gradeMatch && yearMatch;
         });
-    }, [registeredStudents, filterGrade, filterYear]);
+
+        return [...visibleStudents].sort((a, b) => {
+            const direction = sortOrder === 'asc' ? 1 : -1;
+            const nameCompare = (a.name || '').localeCompare(b.name || '', 'ko', { numeric: true, sensitivity: 'base' });
+
+            if (nameCompare !== 0) {
+                return nameCompare * direction;
+            }
+
+            return (a.studentId || '').localeCompare(b.studentId || '', 'ko', { numeric: true, sensitivity: 'base' }) * direction;
+        });
+    }, [registeredStudents, filterGrade, filterYear, sortOrder]);
 
     // Unique Years for Filter
     const availableYears = useMemo(() => {
@@ -563,6 +575,21 @@ const LearnersManagement = ({ registeredStudents, onAddStudent, onDeleteStudent,
                         >
                             <option value="all" className={isDark ? 'bg-[#1e1e2e] text-white' : 'bg-white text-slate-900'}>All Grades</option>
                             {[1, 2, 3].map(g => <option key={g} value={g} className={isDark ? 'bg-[#1e1e2e] text-white' : 'bg-white text-slate-900'}>Grade {g}</option>)}
+                        </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-400">Sort:</span>
+                        <select
+                            value={sortOrder}
+                            onChange={(e) => setSortOrder(e.target.value)}
+                            className={`rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:border-admin-primary ${
+                                isDark
+                                    ? 'border-white/10 bg-white/5 text-white'
+                                    : 'border-slate-300 bg-white text-slate-900'
+                            }`}
+                        >
+                            <option value="asc" className={isDark ? 'bg-[#1e1e2e] text-white' : 'bg-white text-slate-900'}>Name Asc</option>
+                            <option value="desc" className={isDark ? 'bg-[#1e1e2e] text-white' : 'bg-white text-slate-900'}>Name Desc</option>
                         </select>
                     </div>
                 </div>
@@ -1733,13 +1760,124 @@ const CourseEditor = ({ course, onBack }) => {
     );
 };
 
-const ClassManagement = ({ courses, onAddCourse, onDeleteCourse }) => {
+const createUniqueId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const cloneCourseForReuse = (course, titleOverride) => {
+    const nextCourseId = createUniqueId('course');
+
+    return {
+        ...course,
+        id: nextCourseId,
+        title: titleOverride || `${course.title} Copy`,
+        stages: (course.stages || []).map((stage, index) => ({
+            ...stage,
+            id: createUniqueId('stage'),
+            courseId: nextCourseId,
+            order: index + 1,
+            missions: stage.missions ? {
+                easy: stage.missions.easy ? { ...stage.missions.easy } : null,
+                normal: stage.missions.normal ? { ...stage.missions.normal } : null,
+                hard: stage.missions.hard ? { ...stage.missions.hard } : null,
+            } : { easy: null, normal: null, hard: null },
+        })),
+    };
+};
+
+const normalizeImportedCourse = (course, mode = 'copy', usedCourseIds = new Set()) => {
+    const normalizedCourse = {
+        ...course,
+        icon: course?.icon || '📚',
+        theme: {
+            ...DEFAULT_CLASS_THEME,
+            ...(course?.theme || {}),
+        },
+        stages: Array.isArray(course?.stages) ? course.stages : [],
+    };
+
+    if (mode === 'replace') {
+        const preferredCourseId = typeof normalizedCourse.id === 'string' && normalizedCourse.id.trim()
+            ? normalizedCourse.id
+            : createUniqueId('course');
+        const nextCourseId = usedCourseIds.has(preferredCourseId) ? createUniqueId('course') : preferredCourseId;
+        usedCourseIds.add(nextCourseId);
+        const usedStageIds = new Set();
+
+        return {
+            ...normalizedCourse,
+            id: nextCourseId,
+            stages: normalizedCourse.stages.map((stage, index) => ({
+                ...stage,
+                id: (() => {
+                    const preferredStageId = typeof stage?.id === 'string' && stage.id.trim()
+                        ? stage.id
+                        : createUniqueId('stage');
+
+                    if (usedStageIds.has(preferredStageId)) {
+                        const generatedStageId = createUniqueId('stage');
+                        usedStageIds.add(generatedStageId);
+                        return generatedStageId;
+                    }
+
+                    usedStageIds.add(preferredStageId);
+                    return preferredStageId;
+                })(),
+                courseId: nextCourseId,
+                order: index + 1,
+                missions: stage.missions ? {
+                    easy: stage.missions.easy ? { ...stage.missions.easy } : null,
+                    normal: stage.missions.normal ? { ...stage.missions.normal } : null,
+                    hard: stage.missions.hard ? { ...stage.missions.hard } : null,
+                } : { easy: null, normal: null, hard: null },
+            })),
+        };
+    }
+
+    return cloneCourseForReuse(normalizedCourse, `${normalizedCourse.title} (Imported)`);
+};
+
+const buildCourseBackupPayload = (course) => ({
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    course,
+});
+
+const buildCoursesBackupPayload = (courses) => ({
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    courses,
+});
+
+const DEFAULT_CLASS_THEME = {
+    primaryColor: '#3F72AF',
+    accentColor: '#DBE2EF',
+    bgPattern: 'blueprint',
+};
+
+const createClassFormData = (course = null) => ({
+    title: course?.title || '',
+    description: course?.description || '',
+    icon: course?.icon || '📚',
+    primaryColor: course?.theme?.primaryColor || DEFAULT_CLASS_THEME.primaryColor,
+    accentColor: course?.theme?.accentColor || DEFAULT_CLASS_THEME.accentColor,
+    bgPattern: course?.theme?.bgPattern || DEFAULT_CLASS_THEME.bgPattern,
+});
+
+const ClassManagement = ({ courses, onAddCourse, onUpdateCourse, onReplaceCourses, onDeleteCourse }) => {
     const [selectedCourse, setSelectedCourse] = useState(null);
     const isDark = useThemeStore(state => state.isDark);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [openMenuId, setOpenMenuId] = useState(null);
-    const [formData, setFormData] = useState({ title: '', description: '' });
+    const [formData, setFormData] = useState(createClassFormData());
     const [error, setError] = useState('');
+    const importInputRef = useRef(null);
+    const [editingCourse, setEditingCourse] = useState(null);
+
+    const resetCourseModal = () => {
+        setIsModalOpen(false);
+        setEditingCourse(null);
+        setFormData(createClassFormData());
+        setError('');
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -1748,23 +1886,139 @@ const ClassManagement = ({ courses, onAddCourse, onDeleteCourse }) => {
             return;
         }
 
+        if (editingCourse) {
+            onUpdateCourse(editingCourse.id, {
+                title: formData.title,
+                description: formData.description || 'No description provided.',
+                icon: formData.icon || '📚',
+                theme: {
+                    primaryColor: formData.primaryColor,
+                    accentColor: formData.accentColor,
+                    bgPattern: formData.bgPattern,
+                },
+            });
+            resetCourseModal();
+            return;
+        }
+
         const newCourse = {
             id: `course-${Date.now()}`,
             title: formData.title,
             description: formData.description || 'No description provided.',
-            icon: '📚', // Default icon
+            icon: formData.icon || '📚',
             theme: {
-                primaryColor: '#3F72AF',
-                accentColor: '#DBE2EF',
-                bgPattern: 'blueprint',
+                primaryColor: formData.primaryColor,
+                accentColor: formData.accentColor,
+                bgPattern: formData.bgPattern,
             },
             stages: []
         };
 
         onAddCourse(newCourse);
-        setIsModalOpen(false);
-        setFormData({ title: '', description: '' });
+        resetCourseModal();
+    };
+
+    const handleDuplicateCourse = (course) => {
+        const duplicatedCourse = cloneCourseForReuse(course, `${course.title} (${new Date().getFullYear() + 1})`);
+        onAddCourse(duplicatedCourse);
+        setOpenMenuId(null);
+    };
+
+    const handleExportCourse = (course) => {
+        const backupBlob = new Blob(
+            [JSON.stringify(buildCourseBackupPayload(course), null, 2)],
+            { type: 'application/json' }
+        );
+        const url = URL.createObjectURL(backupBlob);
+        const a = document.createElement('a');
+        const safeTitle = (course.title || 'class').replace(/[^A-Za-z0-9_-]+/g, '_');
+        a.href = url;
+        a.download = `${safeTitle}_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setOpenMenuId(null);
+    };
+
+    const handleExportAllCourses = () => {
+        const backupBlob = new Blob(
+            [JSON.stringify(buildCoursesBackupPayload(courses), null, 2)],
+            { type: 'application/json' }
+        );
+        const url = URL.createObjectURL(backupBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `all_classes_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    const importCourses = (sourceCourses, mode = 'copy') => {
+        const usedCourseIds = new Set();
+        const importedCourses = sourceCourses
+            .filter((sourceCourse) => sourceCourse?.title && Array.isArray(sourceCourse.stages))
+            .map((sourceCourse) => normalizeImportedCourse(sourceCourse, mode, usedCourseIds));
+
+        if (importedCourses.length === 0) {
+            alert('Invalid backup file format.');
+            return;
+        }
+
+        if (mode === 'replace') {
+            onReplaceCourses(importedCourses);
+            return;
+        }
+
+        importedCourses.forEach((course) => onAddCourse(course));
+    };
+
+    const handleImportCourse = async (event) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+
+        if (!file) return;
+
+        try {
+            const rawText = await file.text();
+            const parsed = JSON.parse(rawText);
+            const sourceCourse = parsed?.course;
+            const sourceCourses = parsed?.courses;
+
+            if (Array.isArray(sourceCourses)) {
+                const shouldReplace = window.confirm(
+                    'Restore all classes from this backup?\n\nPress OK to replace current classes.\nPress Cancel to import them as copies.'
+                );
+                importCourses(sourceCourses, shouldReplace ? 'replace' : 'copy');
+                return;
+            }
+
+            if (!sourceCourse || !sourceCourse.title || !Array.isArray(sourceCourse.stages)) {
+                alert('Invalid backup file format.');
+                return;
+            }
+
+            onAddCourse(normalizeImportedCourse(sourceCourse, 'copy'));
+        } catch {
+            alert('Failed to read the backup file. Please upload a valid JSON backup.');
+        }
+    };
+
+    const handleOpenCreateModal = () => {
+        setEditingCourse(null);
+        setFormData(createClassFormData());
         setError('');
+        setIsModalOpen(true);
+    };
+
+    const handleOpenEditModal = (course) => {
+        setEditingCourse(course);
+        setFormData(createClassFormData(course));
+        setError('');
+        setIsModalOpen(true);
+        setOpenMenuId(null);
     };
 
     if (selectedCourse) {
@@ -1779,13 +2033,36 @@ const ClassManagement = ({ courses, onAddCourse, onDeleteCourse }) => {
                     <h3 className="text-2xl font-bold text-white">Class Management</h3>
                     <p className="text-gray-400 text-sm mt-1">Manage all classes and curriculum</p>
                 </div>
-                <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 bg-admin-primary hover:bg-admin-primary/90 text-white px-5 py-2.5 rounded-xl font-medium text-sm transition-all shadow-lg shadow-admin-primary/20"
-                >
-                    <span className="material-symbols-outlined text-[18px]">add</span>
-                    <span>Add Class</span>
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => importInputRef.current?.click()}
+                        className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-white px-5 py-2.5 rounded-xl font-medium text-sm transition-all border border-white/10"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">upload_file</span>
+                        <span>Import Backup</span>
+                    </button>
+                    <button
+                        onClick={handleExportAllCourses}
+                        className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-white px-5 py-2.5 rounded-xl font-medium text-sm transition-all border border-white/10"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">download</span>
+                        <span>Download All Backups</span>
+                    </button>
+                    <button
+                        onClick={handleOpenCreateModal}
+                        className="flex items-center gap-2 bg-admin-primary hover:bg-admin-primary/90 text-white px-5 py-2.5 rounded-xl font-medium text-sm transition-all shadow-lg shadow-admin-primary/20"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">add</span>
+                        <span>Add Class</span>
+                    </button>
+                    <input
+                        ref={importInputRef}
+                        type="file"
+                        accept="application/json,.json"
+                        className="hidden"
+                        onChange={handleImportCourse}
+                    />
+                </div>
             </div>
 
             <div className={`rounded-2xl border ${
@@ -1840,10 +2117,24 @@ const ClassManagement = ({ courses, onAddCourse, onDeleteCourse }) => {
                                             <div className="absolute right-8 top-8 w-48 bg-admin-card-dark border border-white/10 rounded-xl shadow-xl z-20 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                                                 <button
                                                     className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2"
-                                                    onClick={() => setOpenMenuId(null)}
+                                                    onClick={() => handleOpenEditModal(course)}
                                                 >
                                                     <span className="material-symbols-outlined text-[18px]">edit</span>
                                                     Edit Class
+                                                </button>
+                                                <button
+                                                    className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2"
+                                                    onClick={() => handleDuplicateCourse(course)}
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">content_copy</span>
+                                                    Duplicate Class
+                                                </button>
+                                                <button
+                                                    className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2"
+                                                    onClick={() => handleExportCourse(course)}
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">download</span>
+                                                    Download Backup
                                                 </button>
                                                 <button
                                                     className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors flex items-center gap-2"
@@ -1880,8 +2171,8 @@ const ClassManagement = ({ courses, onAddCourse, onDeleteCourse }) => {
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                         <div className="bg-admin-card-dark w-full max-w-md rounded-2xl border border-white/10 shadow-2xl p-6 animate-in fade-in zoom-in duration-200">
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-xl font-bold text-white">Add New Class</h3>
-                                <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white transition-colors">
+                                <h3 className="text-xl font-bold text-white">{editingCourse ? 'Edit Class' : 'Add New Class'}</h3>
+                                <button onClick={resetCourseModal} className="text-gray-400 hover:text-white transition-colors">
                                     <span className="material-symbols-outlined">close</span>
                                 </button>
                             </div>
@@ -1907,6 +2198,50 @@ const ClassManagement = ({ courses, onAddCourse, onDeleteCourse }) => {
                                         placeholder="Brief description of the class..."
                                     />
                                 </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Icon</label>
+                                    <input
+                                        type="text"
+                                        value={formData.icon}
+                                        onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                                        className="w-full bg-background-dark border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-admin-primary transition-colors"
+                                        placeholder="e.g. 📚"
+                                        maxLength={4}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-400 mb-1">Primary Color</label>
+                                        <input
+                                            type="color"
+                                            value={formData.primaryColor}
+                                            onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
+                                            className="w-full h-11 bg-background-dark border border-white/10 rounded-xl px-2 py-2"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-400 mb-1">Accent Color</label>
+                                        <input
+                                            type="color"
+                                            value={formData.accentColor}
+                                            onChange={(e) => setFormData({ ...formData, accentColor: e.target.value })}
+                                            className="w-full h-11 bg-background-dark border border-white/10 rounded-xl px-2 py-2"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Background Pattern</label>
+                                    <select
+                                        value={formData.bgPattern}
+                                        onChange={(e) => setFormData({ ...formData, bgPattern: e.target.value })}
+                                        className="w-full bg-background-dark border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-admin-primary transition-colors"
+                                    >
+                                        <option value="blueprint" className="bg-gray-800">Blueprint</option>
+                                        <option value="grid" className="bg-gray-800">Grid</option>
+                                        <option value="dots" className="bg-gray-800">Dots</option>
+                                        <option value="solid" className="bg-gray-800">Solid</option>
+                                    </select>
+                                </div>
 
                                 {error && (
                                     <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm flex items-center gap-2">
@@ -1918,7 +2253,7 @@ const ClassManagement = ({ courses, onAddCourse, onDeleteCourse }) => {
                                 <div className="flex gap-3 mt-6 pt-2">
                                     <button
                                         type="button"
-                                        onClick={() => setIsModalOpen(false)}
+                                        onClick={resetCourseModal}
                                         className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-white hover:bg-white/5 transition-colors font-medium"
                                     >
                                         Cancel
@@ -1927,7 +2262,7 @@ const ClassManagement = ({ courses, onAddCourse, onDeleteCourse }) => {
                                         type="submit"
                                         className="flex-1 px-4 py-2.5 rounded-xl bg-admin-primary hover:bg-admin-primary/90 text-white transition-colors font-medium shadow-lg shadow-admin-primary/20"
                                     >
-                                        Add Class
+                                        {editingCourse ? 'Save Changes' : 'Add Class'}
                                     </button>
                                 </div>
                             </form>
@@ -4052,7 +4387,7 @@ export default function AdminPage() {
     const isDark = useThemeStore(state => state.isDark);
     const { user, logout, registeredStudents, registerStudent, removeStudent, bulkRegisterStudents, updateStudent, subAdmins, addSubAdmin, removeSubAdmin, updateSubAdmin, setAllStudents } = useAuthStore();
     const sessionScores = useAssessmentStore(state => state.sessionScores);
-    const { courses, addCourse, deleteCourse } = useStageStore();
+    const { courses, addCourse, replaceCourses, updateCourse, deleteCourse } = useStageStore();
     const { submissions: _submissions, totalStars, progress, reflections = [], setAllProgressData } = useProgressStore();
     const isSubAdmin = user?.role === 'subadmin';
     const [currentView, setCurrentView] = useState('dashboard');
@@ -4460,6 +4795,8 @@ export default function AdminPage() {
                         <ClassManagement
                             courses={courses.filter(c => c.title.toLowerCase().includes(searchTerm.toLowerCase()))}
                             onAddCourse={addCourse}
+                            onUpdateCourse={updateCourse}
+                            onReplaceCourses={replaceCourses}
                             onDeleteCourse={deleteCourse}
                         />
                     )}
