@@ -2343,3 +2343,33 @@ pm run build -> Success
 
 ### Notes
 - Root cause for the blank mission area was the student page hard-coding the rendered component from difficulty instead of the saved mission `type`, so admin-edited missions could resolve to the wrong view or no useful content.
+
+## 2026-04-20 - Tutorial Upload Sync Investigation And Nginx Body Limit Fix
+
+### Request
+- Investigate why tutorial HTML uploaded by admin still did not appear on the student page.
+
+### Scope
+- Shared-state persistence path for courses/tutorial HTML.
+- Backend request size limits and deployment Nginx config.
+- No student UI rendering changes in this step.
+
+### Implemented
+- Confirmed the frontend tutorial limit had already been removed and student mission rendering had already been corrected in the previous step.
+- Identified the likely deployment root cause: large `courses` shared-state saves can be rejected by Nginx before reaching Node when `client_max_body_size` is not configured.
+- Increased Node JSON body limit from 50 MB to 100 MB in `server/server.js`.
+- Added `client_max_body_size 100m;` to `server/nginx.conf.example`.
+- Updated `DEPLOY_UBUNTU.md` to document the required Nginx body-size allowance for large tutorial uploads.
+
+### Validation
+- `node --check server/server.js` -> Success
+- Manual config diff review -> Success
+
+### Files
+- `server/server.js`
+- `server/nginx.conf.example`
+- `DEPLOY_UBUNTU.md`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Symptom pattern: admin can appear to have uploaded tutorial content locally, but students still see old/no tutorial content because the large `/api/app-state/courses` request never reaches the API through Nginx.

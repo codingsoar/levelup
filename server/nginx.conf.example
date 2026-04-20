@@ -1,6 +1,7 @@
 server {
     listen 80;
     server_name your-domain.example.com;
+    client_max_body_size 100m;
 
     root /var/www/starquest/dist;
     index index.html;

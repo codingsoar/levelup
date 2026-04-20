@@ -70,6 +70,8 @@ sudo cp /var/www/starquest/server/nginx.conf.example /etc/nginx/sites-available/
 sudo nano /etc/nginx/sites-available/starquest
 ```
 
+The example config includes `client_max_body_size 100m;` so large tutorial HTML uploads can pass through Nginx to the API.
+
 Enable the site:
 
 ```bash
@@ -98,6 +100,7 @@ git pull
 - The SQLite DB file is created at `/var/www/starquest/server/database.sqlite`.
 - The database file is intentionally ignored by Git.
 - Frontend requests `/api`, and Nginx proxies those requests to the Node server on port `3000`.
+- If admins upload large tutorial HTML files, Nginx must allow a matching request body size or the course save request will be rejected before it reaches Node.
 - If you change the deployment path, update [server/ecosystem.config.js](/D:/personal/server/ecosystem.config.js).
 
 ## 8. Deployment Checklist
