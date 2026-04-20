@@ -2311,3 +2311,35 @@ pm run build -> Success
 
 ### Notes
 - Commit includes the already-present reflection deletion changes together with the student submission upload/admin download work.
+
+## 2026-04-20 - Tutorial Upload Limit Removal And Student Mission Rendering Fix
+
+### Request
+- Remove the admin tutorial HTML upload size limit.
+- Fix the student tutorial and practice mission screens that were showing no usable content.
+
+### Scope
+- Tutorial mission upload UI in `src/pages/AdminPage.jsx`.
+- Student mission rendering logic in `src/pages/StudentDashboardPage.jsx`.
+- No backend API or database changes.
+
+### Implemented
+- Removed the tutorial HTML file size check from the admin mission editor and updated the helper copy so it no longer claims a 1 MB limit.
+- Changed the student mission screen to render by `mission.type` instead of assuming `easy=video`, `normal=tutorial`, `hard=practice`.
+- Added fallback tutorial rendering for legacy `tutorialSteps` data when `htmlContent` is missing.
+- Added empty-state cards so unset mission slots no longer appear as a blank screen.
+- Added a practice-task instruction fallback when `taskDescription` is missing.
+- Updated mission cards on the student stage map to show the actual configured mission title/type/icon for each slot.
+
+### Validation
+- `npx eslint src/pages/AdminPage.jsx src/pages/StudentDashboardPage.jsx` -> Success
+- `npm run build` -> Failed in sandbox (`spawn EPERM`)
+- `npm run build` (escalated) -> Success
+
+### Files
+- `src/pages/AdminPage.jsx`
+- `src/pages/StudentDashboardPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Root cause for the blank mission area was the student page hard-coding the rendered component from difficulty instead of the saved mission `type`, so admin-edited missions could resolve to the wrong view or no useful content.

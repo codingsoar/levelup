@@ -1106,7 +1106,6 @@ const createMissionFormData = (mission) => ({
 });
 
 const MissionEditorModal = ({ isOpen, onClose, mission, onSave, difficulty }) => {
-    const MAX_TUTORIAL_HTML_BYTES = 50 * 1024 * 1024; // 50 MB
     const [formData, setFormData] = useState(() => createMissionFormData(mission));
     const [uploadError, setUploadError] = useState('');
 
@@ -1146,11 +1145,6 @@ const MissionEditorModal = ({ isOpen, onClose, mission, onSave, difficulty }) =>
     const handleTutorialFileUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
-        if (file.size > MAX_TUTORIAL_HTML_BYTES) {
-            setUploadError('File is too large. Please upload an HTML file smaller than 1 MB.');
-            return;
-        }
 
         try {
             const text = await file.text();
@@ -1333,7 +1327,7 @@ const MissionEditorModal = ({ isOpen, onClose, mission, onSave, difficulty }) =>
                                     className="w-full bg-background-dark border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-admin-primary focus:outline-none file:mr-3 file:rounded-lg file:border-0 file:bg-admin-primary/20 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-admin-primary hover:file:bg-admin-primary/30"
                                 />
                                 <p className="text-xs text-gray-500 mt-1">
-                                    Upload a standalone tutorial HTML (max 1 MB). Inline styles/scripts are allowed.
+                                    Upload a standalone tutorial HTML. Inline styles/scripts are allowed.
                                 </p>
                             </div>
                             {uploadError && (

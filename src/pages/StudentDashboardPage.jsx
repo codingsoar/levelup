@@ -9,6 +9,11 @@ import { ChevronLeft, Star, Upload, ChevronRight, Check, Play, BookOpen } from '
 import StudentHeaderActions from '../components/StudentHeaderActions';
 
 const MAX_SUBMISSION_BYTES = 20 * 1024 * 1024;
+const DEFAULT_MISSION_TYPE_BY_DIFFICULTY = {
+    easy: 'video',
+    normal: 'tutorial',
+    hard: 'practice',
+};
 
 export default function StudentDashboardPage() {
     const navigate = useNavigate();
@@ -101,6 +106,7 @@ export default function StudentDashboardPage() {
     const selectedCourse = useMemo(() => myCourses.find(c => c.id === selectedCourseId), [myCourses, selectedCourseId]);
     const selectedStage = useMemo(() => selectedCourse?.stages.find(s => s.id === selectedStageId), [selectedCourse, selectedStageId]);
     const selectedMission = useMemo(() => selectedStage?.missions?.[selectedDifficulty], [selectedStage, selectedDifficulty]);
+    const selectedMissionType = selectedMission?.type || (selectedDifficulty ? DEFAULT_MISSION_TYPE_BY_DIFFICULTY[selectedDifficulty] : null);
 
     const handleCourseClick = (courseId) => {
         setSelectedCourseId(courseId);
@@ -404,6 +410,7 @@ export default function StudentDashboardPage() {
 
     const TutorialView = ({ mission, onComplete }) => {
         const hasHtml = !!mission.htmlContent;
+        const hasSteps = Array.isArray(mission.tutorialSteps) && mission.tutorialSteps.length > 0;
         const [canComplete, setCanComplete] = useState(false);
 
         // iframe 내부에서 스크롤 완료 메시지 수신
@@ -480,7 +487,41 @@ export default function StudentDashboardPage() {
                 </div>
             );
         }
-        return <div className="p-8 text-center text-slate-500">Traditional step-by-step tutorials are no longer supported. Please upload an HTML file in Admin.</div>;
+        if (hasSteps) {
+            return (
+                <div className="space-y-4">
+                    <Card className="p-6 shadow-lg border border-slate-200">
+                        <h3 className="text-xl font-bold text-slate-800 mb-4">{mission.title || 'Tutorial'}</h3>
+                        <div className="space-y-4">
+                            {mission.tutorialSteps.map((step, index) => (
+                                <div key={`${step.step || index}-${step.title || 'step'}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                    <div className="flex items-start gap-4">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
+                                            {step.step || index + 1}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h4 className="text-base font-bold text-slate-800">{step.title || `Step ${index + 1}`}</h4>
+                                            <p className="text-sm leading-6 text-slate-600 whitespace-pre-wrap">{step.description || ''}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+                    <div className="flex justify-center">
+                        <Button color="success" className="bg-green-600 text-white font-bold px-8" onPress={onComplete}>
+                            Complete Tutorial
+                        </Button>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <Card className="p-8 text-center text-slate-500 shadow-lg border border-slate-200">
+                No tutorial content is available yet. Ask the administrator to upload tutorial content for this mission.
+            </Card>
+        );
     };
 
     const PracticeView = ({ mission, onSubmit }) => {
@@ -501,7 +542,7 @@ export default function StudentDashboardPage() {
             <div className="space-y-6">
                 <Card className="p-6 shadow-lg border border-slate-200">
                     <h3 className="text-lg font-bold text-slate-800 mb-2">📋 Instructions</h3>
-                    <div className="p-4 bg-slate-50 rounded-xl text-slate-600 whitespace-pre-wrap">{mission.taskDescription}</div>
+                    <div className="p-4 bg-slate-50 rounded-xl text-slate-600 whitespace-pre-wrap">{mission.taskDescription || 'No task instructions have been added yet.'}</div>
                 </Card>
                 <Card className="p-6 shadow-lg border border-slate-200 text-center space-y-4">
                     <label className="flex flex-col items-center justify-center p-10 border-2 border-dashed border-slate-300 rounded-2xl hover:border-primary cursor-pointer transition-colors bg-slate-50/50">
@@ -921,11 +962,14 @@ export default function StudentDashboardPage() {
                                                     <div className="p-4 bg-white rounded-2xl border border-primary/20 shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
                                                         <div className="grid grid-cols-1 gap-3">
                                                             {[
-                                                                { diff: 'easy', label: 'Video & Quiz', icon: <Play size={16} /> },
-                                                                { diff: 'normal', label: 'HTML Tutorial', icon: <BookOpen size={16} /> },
-                                                                { diff: 'hard', label: 'Final Practice', icon: <Upload size={16} /> }
+                                                                { diff: 'easy', label: 'Video & Quiz' },
+                                                                { diff: 'normal', label: 'HTML Tutorial' },
+                                                                { diff: 'hard', label: 'Final Practice' }
                                                             ].map(m => {
+                                                                const mission = stage.missions?.[m.diff];
                                                                 const missionDone = progress?.[m.diff];
+                                                                const missionType = mission?.type || DEFAULT_MISSION_TYPE_BY_DIFFICULTY[m.diff];
+                                                                const missionLabel = mission?.title || m.label;
                                                                 return (
                                                                     <button
                                                                         key={m.diff}
@@ -934,11 +978,11 @@ export default function StudentDashboardPage() {
                                                                     >
                                                                         <div className="flex items-center gap-3">
                                                                             <div className={`size-8 rounded-lg flex items-center justify-center ${missionDone ? 'bg-green-500 text-white' : 'bg-primary/20 text-primary'}`}>
-                                                                                {m.icon}
+                                                                                {missionType === 'video' ? <Play size={16} /> : missionType === 'tutorial' ? <BookOpen size={16} /> : <Upload size={16} />}
                                                                             </div>
                                                                             <div className="text-left">
-                                                                                <p className={`text-xs font-bold ${missionDone ? 'text-green-700' : 'text-slate-800'}`}>{m.label}</p>
-                                                                                <p className="text-[10px] text-slate-400 capitalize">{m.diff}</p>
+                                                                                <p className={`text-xs font-bold ${missionDone ? 'text-green-700' : 'text-slate-800'}`}>{missionLabel}</p>
+                                                                                <p className="text-[10px] text-slate-400 capitalize">{missionType}</p>
                                                                             </div>
                                                                         </div>
                                                                         {missionDone && <Star size={14} className="text-amber-500 fill-amber-500" />}
@@ -979,11 +1023,14 @@ export default function StudentDashboardPage() {
                                                             <div className="p-4 bg-white rounded-2xl border border-primary/20 shadow-xl">
                                                                 <div className="grid grid-cols-1 gap-3">
                                                                     {[
-                                                                        { diff: 'easy', label: 'Video & Quiz', icon: <Play size={16} /> },
-                                                                        { diff: 'normal', label: 'HTML Tutorial', icon: <BookOpen size={16} /> },
-                                                                        { diff: 'hard', label: 'Final Practice', icon: <Upload size={16} /> }
+                                                                        { diff: 'easy', label: 'Video & Quiz' },
+                                                                        { diff: 'normal', label: 'HTML Tutorial' },
+                                                                        { diff: 'hard', label: 'Final Practice' }
                                                                     ].map(m => {
+                                                                        const mission = stage.missions?.[m.diff];
                                                                         const missionDone = progress?.[m.diff];
+                                                                        const missionType = mission?.type || DEFAULT_MISSION_TYPE_BY_DIFFICULTY[m.diff];
+                                                                        const missionLabel = mission?.title || m.label;
                                                                         return (
                                                                             <button
                                                                                 key={m.diff}
@@ -992,11 +1039,11 @@ export default function StudentDashboardPage() {
                                                                             >
                                                                                 <div className="flex items-center gap-3">
                                                                                     <div className={`size-8 rounded-lg flex items-center justify-center ${missionDone ? 'bg-green-500 text-white' : 'bg-primary/20 text-primary'}`}>
-                                                                                        {m.icon}
+                                                                                        {missionType === 'video' ? <Play size={16} /> : missionType === 'tutorial' ? <BookOpen size={16} /> : <Upload size={16} />}
                                                                                     </div>
                                                                                     <div className="text-left">
-                                                                                        <p className={`text-xs font-bold ${missionDone ? 'text-green-700' : 'text-slate-800'}`}>{m.label}</p>
-                                                                                        <p className="text-[10px] text-slate-400 capitalize">{m.diff}</p>
+                                                                                        <p className={`text-xs font-bold ${missionDone ? 'text-green-700' : 'text-slate-800'}`}>{missionLabel}</p>
+                                                                                        <p className="text-[10px] text-slate-400 capitalize">{missionType}</p>
                                                                                     </div>
                                                                                 </div>
                                                                                 {missionDone && <Star size={14} className="text-amber-500 fill-amber-500" />}
@@ -1014,7 +1061,7 @@ export default function StudentDashboardPage() {
                                 </div>
                             )}
 
-                            {currentView === 'mission' && selectedMission && (
+                            {currentView === 'mission' && (
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between mb-4">
                                         <div className="flex items-center gap-4">
@@ -1022,9 +1069,9 @@ export default function StudentDashboardPage() {
                                                 <ChevronLeft size={20} />
                                             </Button>
                                             <div>
-                                                <h2 className="text-2xl font-bold">{selectedMission.title}</h2>
+                                                <h2 className="text-2xl font-bold">{selectedMission?.title || 'Mission'}</h2>
                                                 <p className="text-slate-500 text-sm">
-                                                    {selectedDifficulty === 'easy' ? 'Watch and solve' : selectedDifficulty === 'normal' ? 'Interactive Guide' : 'Demonstrate your skills'}
+                                                    {selectedMissionType === 'video' ? 'Watch and solve' : selectedMissionType === 'tutorial' ? 'Interactive Guide' : 'Demonstrate your skills'}
                                                 </p>
                                             </div>
                                         </div>
@@ -1036,9 +1083,19 @@ export default function StudentDashboardPage() {
                                         )}
                                     </div>
 
-                                    {selectedDifficulty === 'easy' && <VideoView mission={selectedMission} onComplete={handleMissionComplete} />}
-                                    {selectedDifficulty === 'normal' && <TutorialView mission={selectedMission} onComplete={handleMissionComplete} />}
-                                    {selectedDifficulty === 'hard' && <PracticeView mission={selectedMission} onSubmit={handlePracticeSubmit} />}
+                                    {!selectedMission && (
+                                        <Card className="p-8 text-center text-slate-500 shadow-lg border border-slate-200">
+                                            No mission has been configured for this slot yet. Ask the administrator to add content for this stage.
+                                        </Card>
+                                    )}
+                                    {selectedMission && selectedMissionType === 'video' && <VideoView mission={selectedMission} onComplete={handleMissionComplete} />}
+                                    {selectedMission && selectedMissionType === 'tutorial' && <TutorialView mission={selectedMission} onComplete={handleMissionComplete} />}
+                                    {selectedMission && selectedMissionType === 'practice' && <PracticeView mission={selectedMission} onSubmit={handlePracticeSubmit} />}
+                                    {selectedMission && !['video', 'tutorial', 'practice'].includes(selectedMissionType) && (
+                                        <Card className="p-8 text-center text-slate-500 shadow-lg border border-slate-200">
+                                            This mission type is not supported yet.
+                                        </Card>
+                                    )}
 
                                     <Modal isOpen={showReflectionModal} onClose={closeReflectionModal} placement="center" backdrop="blur">
                                         <ModalContent className="border-2 border-slate-300 bg-white shadow-2xl">
