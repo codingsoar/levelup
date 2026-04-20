@@ -2373,3 +2373,37 @@ pm run build -> Success
 
 ### Notes
 - Symptom pattern: admin can appear to have uploaded tutorial content locally, but students still see old/no tutorial content because the large `/api/app-state/courses` request never reaches the API through Nginx.
+
+## 2026-04-20 - Server-Hosted Tutorial Assets
+
+### Request
+- Replace oversized inline tutorial HTML storage with a server-hosted file flow.
+- Re-check the student practice submission area that seemed blank when entering assignment work.
+
+### Scope
+- Tutorial upload/save/render path across admin UI, backend API, and student tutorial iframe.
+- No database schema changes were needed because tutorial asset references stay inside the existing course JSON.
+
+### Implemented
+- Added backend tutorial asset storage under `server/uploads/tutorial-assets`.
+- Added `POST /api/tutorial-assets` to upload tutorial HTML files to the server and return a hosted URL.
+- Added `GET /api/tutorial-assets/:assetName` to serve hosted tutorial HTML and inject the existing completion-detection script before rendering.
+- Updated admin mission editing so tutorial HTML uploads go directly to the server first, then the mission saves only the returned `tutorialUrl`/storage key instead of embedding full `htmlContent`.
+- Kept backward compatibility so legacy inline `htmlContent` tutorials still render for older missions.
+- Updated the student tutorial view to prefer hosted tutorial URLs, with inline HTML and tutorial-step fallback still supported.
+
+### Validation
+- `node --check server/server.js` -> Success
+- `npx eslint src/pages/AdminPage.jsx src/pages/StudentDashboardPage.jsx` -> Success
+- `npm run build` -> Failed in sandbox (`spawn EPERM`)
+- `npm run build` (escalated) -> Success
+
+### Files
+- `server/server.js`
+- `src/pages/AdminPage.jsx`
+- `src/pages/StudentDashboardPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- This change avoids pushing 40 MB-class tutorial HTML into the shared `courses` JSON, which was the main risk behind long saves and missing student-side tutorial content.
+- Existing orphaned tutorial asset files are not cleaned up automatically yet when admins replace old uploads.

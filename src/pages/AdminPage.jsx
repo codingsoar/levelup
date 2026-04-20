@@ -1101,6 +1101,8 @@ const createMissionFormData = (mission) => ({
     tutorialSteps: mission?.tutorialSteps || [],
     htmlContent: mission?.htmlContent || '',
     htmlFileName: mission?.htmlFileName || '',
+    tutorialUrl: mission?.tutorialUrl || '',
+    tutorialStorageKey: mission?.tutorialStorageKey || '',
     hasQuiz: (mission?.quizQuestions && mission.quizQuestions.length > 0) || false,
     quizQuestions: mission?.quizQuestions || [],
 });
@@ -1108,6 +1110,7 @@ const createMissionFormData = (mission) => ({
 const MissionEditorModal = ({ isOpen, onClose, mission, onSave, difficulty }) => {
     const [formData, setFormData] = useState(() => createMissionFormData(mission));
     const [uploadError, setUploadError] = useState('');
+    const [isUploadingTutorial, setIsUploadingTutorial] = useState(false);
 
     if (!isOpen) return null;
 
@@ -1137,6 +1140,17 @@ const MissionEditorModal = ({ isOpen, onClose, mission, onSave, difficulty }) =>
         if (!finalData.hasQuiz) {
             finalData.quizQuestions = [];
         }
+        if (finalData.type === 'tutorial' && finalData.tutorialUrl) {
+            finalData.htmlContent = '';
+            finalData.tutorialSteps = [];
+        }
+        if (finalData.type !== 'tutorial') {
+            finalData.htmlContent = '';
+            finalData.htmlFileName = '';
+            finalData.tutorialUrl = '';
+            finalData.tutorialStorageKey = '';
+            finalData.tutorialSteps = [];
+        }
         delete finalData.hasQuiz;
         onSave({ ...mission, ...finalData });
         onClose();
@@ -1147,16 +1161,47 @@ const MissionEditorModal = ({ isOpen, onClose, mission, onSave, difficulty }) =>
         if (!file) return;
 
         try {
-            const text = await file.text();
+            setIsUploadingTutorial(true);
+            setUploadError('');
+            const arrayBuffer = await file.arrayBuffer();
+            const bytes = new Uint8Array(arrayBuffer);
+            let binary = '';
+            const chunkSize = 0x8000;
+
+            for (let index = 0; index < bytes.length; index += chunkSize) {
+                binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+            }
+
+            const response = await fetch('/api/tutorial-assets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fileName: file.name,
+                    fileType: file.type,
+                    fileSize: file.size,
+                    fileData: btoa(binary),
+                }),
+            });
+            const data = await response.json();
+
+            if (!response.ok || !data?.success || !data.tutorialAsset) {
+                throw new Error(data?.message || 'Failed to upload tutorial HTML.');
+            }
+
             setFormData(prev => ({
                 ...prev,
-                htmlContent: text,
-                htmlFileName: file.name
+                htmlContent: '',
+                tutorialSteps: [],
+                htmlFileName: data.tutorialAsset.fileName || file.name,
+                tutorialUrl: data.tutorialAsset.tutorialUrl || '',
+                tutorialStorageKey: data.tutorialAsset.tutorialStorageKey || '',
             }));
             setUploadError('');
         } catch (error) {
-            setUploadError('Failed to read file. Please try again with a valid HTML file.');
+            setUploadError('Failed to upload tutorial HTML. Please try again.');
             console.error(error);
+        } finally {
+            setIsUploadingTutorial(false);
         }
     };
 
@@ -1324,17 +1369,22 @@ const MissionEditorModal = ({ isOpen, onClose, mission, onSave, difficulty }) =>
                                     type="file"
                                     accept=".html,.htm,text/html"
                                     onChange={handleTutorialFileUpload}
+                                    disabled={isUploadingTutorial}
                                     className="w-full bg-background-dark border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-admin-primary focus:outline-none file:mr-3 file:rounded-lg file:border-0 file:bg-admin-primary/20 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-admin-primary hover:file:bg-admin-primary/30"
                                 />
                                 <p className="text-xs text-gray-500 mt-1">
-                                    Upload a standalone tutorial HTML. Inline styles/scripts are allowed.
+                                    Upload a standalone tutorial HTML file to the server. Large files may take some time.
                                 </p>
                             </div>
                             {uploadError && (
                                 <p className="text-sm text-red-400">{uploadError}</p>
                             )}
                             <div className="text-xs text-gray-400">
-                                {formData.htmlContent
+                                {isUploadingTutorial
+                                    ? 'Uploading tutorial HTML to server...'
+                                    : formData.tutorialUrl
+                                    ? `Uploaded: ${formData.htmlFileName || 'tutorial.html'}`
+                                    : formData.htmlContent
                                     ? `Loaded: ${formData.htmlFileName || 'inline tutorial'} (${formData.htmlContent.length.toLocaleString()} chars)`
                                     : 'No tutorial HTML uploaded yet.'}
                             </div>
@@ -1343,7 +1393,7 @@ const MissionEditorModal = ({ isOpen, onClose, mission, onSave, difficulty }) =>
 
                     <div className="flex justify-end gap-3 pt-4">
                         <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl text-gray-300 hover:bg-white/5 transition-colors">Cancel</button>
-                        <button type="submit" className="px-4 py-2 rounded-xl bg-admin-primary text-white hover:bg-admin-primary/90 transition-colors">Save Mission</button>
+                        <button type="submit" disabled={isUploadingTutorial} className="px-4 py-2 rounded-xl bg-admin-primary text-white hover:bg-admin-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Mission</button>
                     </div>
                 </form>
             </div>

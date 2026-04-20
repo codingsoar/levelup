@@ -409,13 +409,15 @@ export default function StudentDashboardPage() {
     };
 
     const TutorialView = ({ mission, onComplete }) => {
+        const tutorialSrc = mission.tutorialUrl || '';
+        const hasHostedTutorial = !!tutorialSrc;
         const hasHtml = !!mission.htmlContent;
         const hasSteps = Array.isArray(mission.tutorialSteps) && mission.tutorialSteps.length > 0;
         const [canComplete, setCanComplete] = useState(false);
 
         // iframe 내부에서 스크롤 완료 메시지 수신
         useEffect(() => {
-            if (!hasHtml) return;
+            if (!hasHtml && !hasHostedTutorial) return;
             const handler = (e) => {
                 if (e.data === 'TUTORIAL_SCROLL_END') {
                     setCanComplete(true);
@@ -423,7 +425,30 @@ export default function StudentDashboardPage() {
             };
             window.addEventListener('message', handler);
             return () => window.removeEventListener('message', handler);
-        }, [hasHtml]);
+        }, [hasHostedTutorial, hasHtml]);
+
+        if (hasHostedTutorial) {
+            return (
+                <div className="space-y-4">
+                    <Card className="shadow-2xl border border-slate-200 overflow-hidden">
+                        <div className="bg-slate-100 p-2 flex items-center gap-2 border-b border-slate-200">
+                            <div className="flex gap-1">
+                                <div className="size-2 rounded-full bg-red-400"></div>
+                                <div className="size-2 rounded-full bg-yellow-400"></div>
+                                <div className="size-2 rounded-full bg-green-400"></div>
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-mono">{mission.htmlFileName || 'tutorial_environment.html'}</span>
+                        </div>
+                        <iframe src={tutorialSrc} title="Tutorial" className="w-full h-[70vh]" sandbox="allow-scripts allow-forms allow-modals allow-popups" />
+                    </Card>
+                    <div className={`flex items-center justify-center p-4 bg-white rounded-xl border shadow-lg transition-all duration-500 ${canComplete ? 'border-green-300 opacity-100' : 'border-slate-200 opacity-40 pointer-events-none'}`}>
+                        <Button color={canComplete ? 'success' : 'default'} className="text-black font-bold px-8" onPress={onComplete} isDisabled={!canComplete}>
+                            {canComplete ? 'Complete Tutorial' : 'Finish the tutorial to enable completion'}
+                        </Button>
+                    </div>
+                </div>
+            );
+        }
 
         if (hasHtml) {
             // HTML 끝에 프로그래스 바 감지 스크립트 삽입

@@ -7,9 +7,12 @@ const db = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const UPLOADS_DIR = path.resolve(__dirname, 'uploads', 'submissions');
+const TUTORIAL_ASSETS_DIR = path.resolve(__dirname, 'uploads', 'tutorial-assets');
 const MAX_SUBMISSION_BYTES = 20 * 1024 * 1024;
+const MAX_TUTORIAL_ASSET_BYTES = 100 * 1024 * 1024;
 
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+fs.mkdirSync(TUTORIAL_ASSETS_DIR, { recursive: true });
 
 const parseCourseIds = (value) => {
     try {
@@ -80,6 +83,40 @@ const removeStoredFile = (filePath) => {
         }
     });
 };
+
+const tutorialProgressDetectScript = `<script>
+(function(){
+    var fired = false;
+    function notifyComplete() {
+        if (fired) return;
+        fired = true;
+        window.parent.postMessage('TUTORIAL_SCROLL_END', '*');
+    }
+
+    function checkProgress() {
+        var prog = document.querySelector('progress');
+        if (prog && prog.value >= prog.max && prog.max > 0) { notifyComplete(); return; }
+
+        var bars = document.querySelectorAll('[role="progressbar"]');
+        for (var i = 0; i < bars.length; i++) {
+            var now = parseFloat(bars[i].getAttribute('aria-valuenow') || 0);
+            var max = parseFloat(bars[i].getAttribute('aria-valuemax') || 100);
+            if (now >= max) { notifyComplete(); return; }
+        }
+
+        var allBars = document.querySelectorAll('[class*="progress"], [id*="progress"], [class*="bar"], [id*="bar"]');
+        for (var j = 0; j < allBars.length; j++) {
+            var w = allBars[j].style.width;
+            if (w === '100%') { notifyComplete(); return; }
+        }
+    }
+
+    var interval = setInterval(function(){
+        checkProgress();
+        if (fired) clearInterval(interval);
+    }, 500);
+})();
+</script>`;
 
 app.use(cors());
 app.use(express.json({ limit: '100mb' }));
@@ -369,6 +406,72 @@ app.post('/api/progress/spend-stars', (req, res) => {
                 return res.json({ success: true, totalStars: currentStars - amount });
             }
         );
+    });
+});
+
+app.post('/api/tutorial-assets', (req, res) => {
+    const { fileName, fileType, fileSize, fileData } = req.body || {};
+
+    if (!fileName || !fileData) {
+        return res.status(400).json({ success: false, message: 'Missing tutorial file payload' });
+    }
+
+    const numericFileSize = Number.parseInt(fileSize, 10);
+    if (!Number.isInteger(numericFileSize) || numericFileSize <= 0 || numericFileSize > MAX_TUTORIAL_ASSET_BYTES) {
+        return res.status(400).json({ success: false, message: 'Invalid tutorial file size' });
+    }
+
+    let fileBuffer;
+    try {
+        fileBuffer = Buffer.from(fileData, 'base64');
+    } catch {
+        return res.status(400).json({ success: false, message: 'Invalid tutorial file payload' });
+    }
+
+    if (!fileBuffer.length || fileBuffer.length > MAX_TUTORIAL_ASSET_BYTES) {
+        return res.status(400).json({ success: false, message: 'Tutorial file is too large' });
+    }
+
+    const safeOriginalName = sanitizeFileName(fileName);
+    const extension = path.extname(safeOriginalName) || '.html';
+    const storedFileName = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}${extension}`;
+    const storedFilePath = path.join(TUTORIAL_ASSETS_DIR, storedFileName);
+
+    fs.writeFile(storedFilePath, fileBuffer, (writeErr) => {
+        if (writeErr) {
+            return res.status(500).json({ success: false, error: writeErr.message });
+        }
+
+        return res.json({
+            success: true,
+            tutorialAsset: {
+                fileName: safeOriginalName,
+                fileSize: numericFileSize,
+                fileType: fileType || 'text/html',
+                tutorialUrl: `/api/tutorial-assets/${storedFileName}`,
+                tutorialStorageKey: storedFileName,
+            },
+        });
+    });
+});
+
+app.get('/api/tutorial-assets/:assetName', (req, res) => {
+    const assetName = path.basename(req.params.assetName || '');
+    if (!assetName) {
+        return res.status(400).json({ success: false, message: 'Invalid tutorial asset name' });
+    }
+
+    const assetPath = path.join(TUTORIAL_ASSETS_DIR, assetName);
+    fs.readFile(assetPath, 'utf8', (readErr, html) => {
+        if (readErr) {
+            if (readErr.code === 'ENOENT') {
+                return res.status(404).json({ success: false, message: 'Tutorial asset not found' });
+            }
+            return res.status(500).json({ success: false, error: readErr.message });
+        }
+
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.send(html + tutorialProgressDetectScript);
     });
 });
 
