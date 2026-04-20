@@ -2407,3 +2407,53 @@ pm run build -> Success
 ### Notes
 - This change avoids pushing 40 MB-class tutorial HTML into the shared `courses` JSON, which was the main risk behind long saves and missing student-side tutorial content.
 - Existing orphaned tutorial asset files are not cleaned up automatically yet when admins replace old uploads.
+
+## 2026-04-20 - Course Progress Student Sorting And Dividers
+
+### Request
+- Sort students properly in the admin course progress view.
+- Make row/column dividers more visible in the per-student progress table.
+
+### Scope
+- `CourseProgressManagement` UI in `src/pages/AdminPage.jsx` only.
+- No backend or persistence changes.
+
+### Implemented
+- Replaced completion-rate-first ordering with the same student ordering used elsewhere: grade ascending, admission year descending, then name and student ID.
+- Added grade/admission-year metadata under each student entry in the progress table.
+- Strengthened horizontal dividers and added visible vertical separators between the progress table columns.
+- Added a subtle header background so the column boundary lines read more clearly.
+
+### Validation
+- `npx eslint src/pages/AdminPage.jsx` -> Success
+- `npm run build` -> Failed in sandbox (`spawn EPERM`)
+
+### Files
+- `src/pages/AdminPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- This keeps course progress ordering consistent with the learners enrollment/course lists instead of ranking by completion percentage.
+
+## 2026-04-20 - Course Progress Completed Stage Highlight
+
+### Request
+- Make completed stage cards in the admin course progress view look clearly green.
+
+### Scope
+- `CourseProgressManagement` stage breakdown card styling in `src/pages/AdminPage.jsx` only.
+- No backend or persistence changes.
+
+### Implemented
+- Strengthened the completed stage card state with a darker green background, clearer green border, and a subtle green shadow.
+- Kept incomplete stage cards unchanged for stronger visual contrast.
+
+### Validation
+- `npx eslint src/pages/AdminPage.jsx` -> Success
+
+### Files
+- `src/pages/AdminPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- This builds on the same-day course progress sorting/divider cleanup and only changes the completed-stage visual emphasis.

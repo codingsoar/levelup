@@ -3690,8 +3690,22 @@ const CourseProgressManagement = ({ courses, registeredStudents, progress, isSub
                 stageRows,
             };
         }).sort((a, b) => {
-            if (b.completionRate !== a.completionRate) return b.completionRate - a.completionRate;
-            return a.student.name.localeCompare(b.student.name, 'ko');
+            const gradeCompare = (a.student.grade || 0) - (b.student.grade || 0);
+            if (gradeCompare !== 0) return gradeCompare;
+
+            const yearCompare = (b.student.admissionYear || 0) - (a.student.admissionYear || 0);
+            if (yearCompare !== 0) return yearCompare;
+
+            const nameCompare = (a.student.name || '').localeCompare(b.student.name || '', 'ko', {
+                numeric: true,
+                sensitivity: 'base',
+            });
+            if (nameCompare !== 0) return nameCompare;
+
+            return (a.student.studentId || '').localeCompare(b.student.studentId || '', 'ko', {
+                numeric: true,
+                sensitivity: 'base',
+            });
         });
     }, [enrolledStudents, progress, selectedCourse]);
 
@@ -3783,24 +3797,27 @@ const CourseProgressManagement = ({ courses, registeredStudents, progress, isSub
                 </div>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-admin-card-dark overflow-hidden">
-                <div className="grid grid-cols-[minmax(220px,1.3fr)_150px_180px_minmax(260px,2fr)] gap-4 border-b border-white/10 px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
-                    <span>Student</span>
-                    <span>Progress</span>
-                    <span>Stage Completion</span>
-                    <span>Stage Breakdown</span>
+            <div className="rounded-3xl border border-white/15 bg-admin-card-dark overflow-hidden">
+                <div className="grid grid-cols-[minmax(220px,1.3fr)_150px_180px_minmax(260px,2fr)] gap-0 border-b border-white/15 px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400 bg-white/[0.03]">
+                    <span className="pr-4">Student</span>
+                    <span className="border-l border-white/10 px-4">Progress</span>
+                    <span className="border-l border-white/10 px-4">Stage Completion</span>
+                    <span className="border-l border-white/10 pl-4">Stage Breakdown</span>
                 </div>
 
                 {studentRows.length > 0 ? (
-                    <div className="divide-y divide-white/5">
+                    <div className="divide-y divide-white/10">
                         {studentRows.map(row => (
-                            <div key={row.student.studentId} className="grid grid-cols-[minmax(220px,1.3fr)_150px_180px_minmax(260px,2fr)] gap-4 px-6 py-5 items-center">
-                                <div className="min-w-0">
+                            <div key={row.student.studentId} className="grid grid-cols-[minmax(220px,1.3fr)_150px_180px_minmax(260px,2fr)] gap-0 px-6 py-5 items-center">
+                                <div className="min-w-0 pr-4">
                                     <p className="font-semibold text-white truncate">{row.student.name}</p>
                                     <p className="text-sm text-gray-400">{row.student.studentId}</p>
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        Grade {row.student.grade || '-'} · {row.student.admissionYear || '-'}
+                                    </p>
                                 </div>
 
-                                <div>
+                                <div className="border-l border-white/10 px-4">
                                     <p className="text-sm font-bold text-white">{row.completionRate}%</p>
                                     <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
                                         <div
@@ -3811,20 +3828,22 @@ const CourseProgressManagement = ({ courses, registeredStudents, progress, isSub
                                     <p className="mt-2 text-xs text-gray-500">{row.completedMissions} / {row.totalStages * 3} missions</p>
                                 </div>
 
-                                <div className="text-sm text-gray-300">
+                                <div className="border-l border-white/10 px-4 text-sm text-gray-300">
                                     <span className="font-semibold text-white">{row.completedStages}</span> / {row.totalStages} stages
                                 </div>
 
-                                <div className="flex flex-wrap gap-2">
+                                <div className="border-l border-white/10 pl-4">
+                                    <div className="flex flex-wrap gap-2">
                                     {row.stageRows.map(stage => (
                                         <div
                                             key={stage.id}
-                                            className={`rounded-xl border px-3 py-2 text-xs ${stage.isComplete ? 'border-admin-green/30 bg-admin-green/10 text-admin-green' : 'border-white/10 bg-white/5 text-gray-300'}`}
+                                            className={`rounded-xl border px-3 py-2 text-xs transition-colors ${stage.isComplete ? 'border-admin-green/40 bg-admin-green/20 text-admin-green shadow-lg shadow-admin-green/10' : 'border-white/10 bg-white/5 text-gray-300'}`}
                                         >
                                             <p className="font-semibold">{stage.title}</p>
                                             <p className="mt-1">{stage.completedCount}/3 complete</p>
                                         </div>
                                     ))}
+                                    </div>
                                 </div>
                             </div>
                         ))}
