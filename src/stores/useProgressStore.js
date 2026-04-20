@@ -3,11 +3,33 @@ import { persist } from 'zustand/middleware';
 
 const normalizeReflection = (reflection) => ({
     ...reflection,
+    id: reflection?.id ?? null,
     reflection: reflection?.reflection ?? reflection?.content ?? '',
     missionTitle: reflection?.missionTitle ?? '',
     courseTitle: reflection?.courseTitle ?? '',
     stageTitle: reflection?.stageTitle ?? '',
     timestamp: reflection?.timestamp ?? (reflection?.created_at ? new Date(reflection.created_at).getTime() : Date.now()),
+});
+
+const normalizeSubmission = (submission) => ({
+    ...submission,
+    id: submission?.id ?? null,
+    studentId: submission?.studentId ?? '',
+    studentName: submission?.studentName ?? '',
+    courseId: submission?.courseId ?? '',
+    courseTitle: submission?.courseTitle ?? '',
+    stageId: submission?.stageId ?? '',
+    stageTitle: submission?.stageTitle ?? '',
+    missionId: submission?.missionId ?? '',
+    missionTitle: submission?.missionTitle ?? '',
+    difficulty: submission?.difficulty ?? 'hard',
+    fileName: submission?.fileName ?? '',
+    fileSize: submission?.fileSize ?? 0,
+    mimeType: submission?.mimeType ?? '',
+    status: submission?.status ?? 'pending',
+    feedback: submission?.feedback ?? '',
+    downloadUrl: submission?.downloadUrl ?? '',
+    timestamp: submission?.timestamp ?? (submission?.created_at ? new Date(submission.created_at).getTime() : Date.now()),
 });
 
 const applyMissionCompletion = (state, studentId, courseId, stageId, difficulty, reflectionEntry = null) => {
@@ -89,6 +111,7 @@ export const useProgressStore = create(
                             progress: { ...state.progress, [studentId]: data.progress || {} },
                             totalStars: { ...state.totalStars, [studentId]: data.totalStars || 0 },
                             reflections: (data.reflections || []).map(normalizeReflection),
+                            submissions: (data.submissions || []).map(normalizeSubmission),
                         }));
                     }
                 } catch (error) {
@@ -96,11 +119,12 @@ export const useProgressStore = create(
                 }
             },
 
-            setAllProgressData: (progressGraph, totalStarsMap, allReflections) => {
+            setAllProgressData: (progressGraph, totalStarsMap, allReflections, allSubmissions = []) => {
                 set({
                     progress: progressGraph || {},
                     totalStars: totalStarsMap || {},
                     reflections: (allReflections || []).map(normalizeReflection),
+                    submissions: (allSubmissions || []).map(normalizeSubmission),
                 });
             },
 
@@ -125,10 +149,47 @@ export const useProgressStore = create(
                 }
             },
 
-            addSubmission: (submission) => {
-                set(state => ({
-                    submissions: [...state.submissions, { ...submission, timestamp: Date.now(), status: 'pending', feedback: '' }],
-                }));
+            addSubmission: async (submission, file) => {
+                if (!submission?.studentId || !file) {
+                    return { success: false, message: 'Missing submission file.' };
+                }
+
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const bytes = new Uint8Array(arrayBuffer);
+                    let binary = '';
+                    const chunkSize = 0x8000;
+
+                    for (let index = 0; index < bytes.length; index += chunkSize) {
+                        binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+                    }
+
+                    const response = await fetch('/api/submissions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ...submission,
+                            fileName: file.name,
+                            fileType: file.type,
+                            fileSize: file.size,
+                            fileData: btoa(binary),
+                        }),
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok || !data?.success || !data.submission) {
+                        return { success: false, message: data?.message || 'Failed to upload submission.' };
+                    }
+
+                    const nextSubmission = normalizeSubmission(data.submission);
+                    set(state => ({
+                        submissions: [nextSubmission, ...state.submissions.filter((entry) => entry.id !== nextSubmission.id)],
+                    }));
+                    return { success: true, submission: nextSubmission };
+                } catch (error) {
+                    console.error('Error uploading submission:', error);
+                    return { success: false, message: 'Failed to upload submission.' };
+                }
             },
 
             updateSubmission: (index, updates) => {
@@ -161,6 +222,29 @@ export const useProgressStore = create(
 
             getAllReflections: () => {
                 return [...(get().reflections || [])].sort((a, b) => b.timestamp - a.timestamp);
+            },
+
+            deleteReflection: async (reflectionId) => {
+                if (!reflectionId) return false;
+
+                try {
+                    const response = await fetch(`/api/admin/reflections/${reflectionId}`, {
+                        method: 'DELETE',
+                    });
+                    const data = await response.json();
+
+                    if (!data?.success) {
+                        return false;
+                    }
+
+                    set(state => ({
+                        reflections: (state.reflections || []).filter(reflection => reflection.id !== reflectionId),
+                    }));
+                    return true;
+                } catch (error) {
+                    console.error('Error deleting reflection on server:', error);
+                    return false;
+                }
             },
 
             getAllStudentProgress: () => {
@@ -219,12 +303,13 @@ export const useProgressStore = create(
         }),
         {
             name: 'starquest-progress',
-            version: 2,
+            version: 3,
             migrate: (persistedState) => {
                 if (!persistedState) return persistedState;
                 return {
                     ...persistedState,
                     reflections: (persistedState.reflections || []).map(normalizeReflection),
+                    submissions: (persistedState.submissions || []).map(normalizeSubmission),
                 };
             },
         }

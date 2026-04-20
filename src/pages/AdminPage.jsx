@@ -4003,7 +4003,7 @@ const SettingsManagement = () => {
     );
 };
 
-const ReflectionManagement = ({ courses, registeredStudents, reflections, isSubAdmin, accessibleCourseIds }) => {
+const ReflectionManagement = ({ courses, registeredStudents, reflections, onDeleteReflection, isSubAdmin, accessibleCourseIds }) => {
     const isDark = useThemeStore(state => state.isDark);
     const availableCourses = useMemo(() => {
         if (!isSubAdmin) return courses;
@@ -4120,13 +4120,35 @@ const ReflectionManagement = ({ courses, registeredStudents, reflections, isSubA
                             <div className="mt-4 space-y-3">
                                 {student.reflections.map((entry, index) => (
                                     <article key={`${student.studentId}-${entry.timestamp}-${index}`} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                                        <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-gray-400">
-                                            <span className="rounded-full bg-white/10 px-2.5 py-1 text-white">{entry.stageTitle || 'Stage'}</span>
-                                            <span className="rounded-full bg-white/10 px-2.5 py-1 uppercase">{entry.difficulty}</span>
-                                            {entry.missionTitle && (
-                                                <span className="rounded-full bg-white/10 px-2.5 py-1">{entry.missionTitle}</span>
-                                            )}
-                                            <span>{new Date(entry.timestamp).toLocaleString('ko-KR')}</span>
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-gray-400">
+                                                <span className="rounded-full bg-white/10 px-2.5 py-1 text-white">{entry.stageTitle || 'Stage'}</span>
+                                                <span className="rounded-full bg-white/10 px-2.5 py-1 uppercase">{entry.difficulty}</span>
+                                                {entry.missionTitle && (
+                                                    <span className="rounded-full bg-white/10 px-2.5 py-1">{entry.missionTitle}</span>
+                                                )}
+                                                <span>{new Date(entry.timestamp).toLocaleString('ko-KR')}</span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={async () => {
+                                                    if (!entry.id) {
+                                                        alert('This reflection cannot be deleted because its ID is missing.');
+                                                        return;
+                                                    }
+                                                    if (!window.confirm('Delete this reflection?')) {
+                                                        return;
+                                                    }
+                                                    const deleted = await onDeleteReflection?.(entry.id);
+                                                    if (!deleted) {
+                                                        alert('Failed to delete the reflection.');
+                                                    }
+                                                }}
+                                                className="inline-flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/20 transition-colors"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">delete</span>
+                                                Delete
+                                            </button>
                                         </div>
                                         <p className="mt-3 text-base leading-7 text-gray-300">{entry.reflection}</p>
                                     </article>
@@ -4144,9 +4166,167 @@ const ReflectionManagement = ({ courses, registeredStudents, reflections, isSubA
     );
 };
 
+const SubmissionManagement = ({ courses, registeredStudents, submissions, isSubAdmin, accessibleCourseIds }) => {
+    const isDark = useThemeStore(state => state.isDark);
+    const availableCourses = useMemo(() => {
+        if (!isSubAdmin) return courses;
+        const allowedCourseIds = new Set(accessibleCourseIds || []);
+        return courses.filter(course => allowedCourseIds.has(course.id));
+    }, [accessibleCourseIds, courses, isSubAdmin]);
+    const [selectedCourseId, setSelectedCourseId] = useState(availableCourses[0]?.id || '');
+    const activeCourseId = availableCourses.some(course => course.id === selectedCourseId)
+        ? selectedCourseId
+        : (availableCourses[0]?.id || '');
+    const selectedCourse = availableCourses.find(course => course.id === activeCourseId) || null;
+    const studentNameById = useMemo(
+        () => Object.fromEntries(registeredStudents.map(student => [student.studentId, student.name])),
+        [registeredStudents]
+    );
+    const courseSubmissions = useMemo(
+        () => [...submissions]
+            .filter(submission => submission.courseId === activeCourseId)
+            .sort((a, b) => b.timestamp - a.timestamp),
+        [activeCourseId, submissions]
+    );
+    const submittedStudentCount = useMemo(
+        () => new Set(courseSubmissions.map(submission => submission.studentId).filter(Boolean)).size,
+        [courseSubmissions]
+    );
+    const pendingCount = courseSubmissions.filter(submission => submission.status === 'pending').length;
+
+    const formatBytes = (value) => {
+        if (!value) return '-';
+        if (value < 1024) return `${value} B`;
+        if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+        return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+    };
+
+    if (availableCourses.length === 0) {
+        return (
+            <div className="max-w-5xl mx-auto space-y-6">
+                <div>
+                    <h3 className="text-2xl font-bold text-white">Submissions</h3>
+                    <p className="text-gray-400 text-sm mt-1">Students uploaded practice files appear here for download.</p>
+                </div>
+                <div className="rounded-3xl border border-white/10 bg-admin-card-dark p-10 text-center text-gray-400">
+                    No accessible classes available for submission review.
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="max-w-7xl mx-auto space-y-8">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                    <h3 className="text-2xl font-bold text-white">Submissions</h3>
+                    <p className="text-gray-400 text-sm mt-1">Download student assignment files by course.</p>
+                </div>
+                <div className="w-full lg:w-80">
+                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Course</label>
+                    <select
+                        value={activeCourseId}
+                        onChange={event => setSelectedCourseId(event.target.value)}
+                        className={`w-full rounded-2xl border px-4 py-3 focus:outline-none focus:ring-2 focus:ring-admin-secondary ${
+                            isDark
+                                ? 'border-white/10 bg-admin-card-dark text-white'
+                                : 'border-slate-300 bg-white text-slate-900'
+                        }`}
+                    >
+                        {availableCourses.map(course => (
+                            <option
+                                key={course.id}
+                                value={course.id}
+                                className={isDark ? 'bg-[#1e1e2e] text-white' : 'bg-white text-slate-900'}
+                            >
+                                {course.title}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-3xl border border-white/10 bg-admin-card-dark p-6">
+                    <p className="text-sm text-gray-400">Selected Course</p>
+                    <p className="mt-2 text-2xl font-bold text-white">{selectedCourse?.title || '-'}</p>
+                </div>
+                <div className="rounded-3xl border border-white/10 bg-admin-card-dark p-6">
+                    <p className="text-sm text-gray-400">Students Submitted</p>
+                    <p className="mt-2 text-2xl font-bold text-white">{submittedStudentCount}</p>
+                </div>
+                <div className="rounded-3xl border border-white/10 bg-admin-card-dark p-6">
+                    <p className="text-sm text-gray-400">Pending Files</p>
+                    <p className="mt-2 text-2xl font-bold text-white">{pendingCount}</p>
+                </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-admin-card-dark overflow-hidden">
+                <div className="grid grid-cols-[1.3fr_1fr_0.9fr_0.9fr_0.9fr_0.9fr] gap-4 border-b border-white/10 px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    <span>Student</span>
+                    <span>Mission</span>
+                    <span>File</span>
+                    <span>Size</span>
+                    <span>Status</span>
+                    <span className="text-right">Action</span>
+                </div>
+                {courseSubmissions.length > 0 ? (
+                    <div className="divide-y divide-white/5">
+                        {courseSubmissions.map((submission) => (
+                            <div key={submission.id || `${submission.studentId}-${submission.timestamp}`} className="grid grid-cols-[1.3fr_1fr_0.9fr_0.9fr_0.9fr_0.9fr] gap-4 px-6 py-5 text-sm text-gray-300">
+                                <div className="min-w-0">
+                                    <p className="truncate font-semibold text-white">{submission.studentName || studentNameById[submission.studentId] || submission.studentId}</p>
+                                    <p className="mt-1 truncate text-xs text-gray-500">{submission.studentId}</p>
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="truncate text-white">{submission.missionTitle || submission.stageTitle || 'Practice Mission'}</p>
+                                    <p className="mt-1 truncate text-xs uppercase text-gray-500">{submission.difficulty}</p>
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="truncate text-white">{submission.fileName}</p>
+                                    <p className="mt-1 truncate text-xs text-gray-500">{new Date(submission.timestamp).toLocaleString('ko-KR')}</p>
+                                </div>
+                                <div className="flex items-center text-gray-400">{formatBytes(submission.fileSize)}</div>
+                                <div className="flex items-center">
+                                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                                        submission.status === 'pending'
+                                            ? 'bg-amber-500/10 text-amber-300'
+                                            : 'bg-emerald-500/10 text-emerald-300'
+                                    }`}>
+                                        {submission.status}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (submission.downloadUrl) {
+                                                window.location.href = submission.downloadUrl;
+                                            }
+                                        }}
+                                        className="inline-flex items-center gap-2 rounded-xl border border-admin-secondary/20 bg-admin-secondary/10 px-3 py-2 text-xs font-semibold text-admin-secondary hover:bg-admin-secondary/20 transition-colors"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">download</span>
+                                        Download
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="px-6 py-12 text-center text-sm text-gray-500">
+                        No submissions have been uploaded for this course yet.
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const SUBADMIN_PERMISSION_OPTIONS = [
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'learners', label: 'Learners' },
+    { key: 'submissions', label: 'Submissions' },
     { key: 'reflection', label: 'Reflection' },
     { key: 'class', label: 'Class' },
     { key: 'assessments', label: 'Assessments' },
@@ -4426,7 +4606,7 @@ export default function AdminPage() {
     const { user, logout, registeredStudents, registerStudent, removeStudent, bulkRegisterStudents, updateStudent, subAdmins, addSubAdmin, removeSubAdmin, updateSubAdmin, setAllStudents } = useAuthStore();
     const sessionScores = useAssessmentStore(state => state.sessionScores);
     const { courses, addCourse, replaceCourses, updateCourse, deleteCourse } = useStageStore();
-    const { submissions: _submissions, totalStars, progress, reflections = [], setAllProgressData } = useProgressStore();
+    const { submissions = [], totalStars, progress, reflections = [], setAllProgressData, deleteReflection } = useProgressStore();
     const isSubAdmin = user?.role === 'subadmin';
     const [currentView, setCurrentView] = useState('dashboard');
     const [selectedProgressCourseId, setSelectedProgressCourseId] = useState('');
@@ -4449,6 +4629,7 @@ export default function AdminPage() {
     const visibleAdminViews = [
         { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', emphasized: true },
         { id: 'learners', label: 'Learners', icon: 'school' },
+        { id: 'submissions', label: 'Submissions', icon: 'upload_file' },
         { id: 'reflection', label: 'Reflection', icon: 'edit_note' },
         { id: 'class', label: 'Class', icon: 'menu_book' },
         { id: 'assessments', label: 'Assessments', icon: 'quiz' },
@@ -4484,7 +4665,7 @@ export default function AdminPage() {
                         progressGraph[s.studentId] = s.progress || {};
                     });
 
-                    setAllProgressData(progressGraph, totalStarsMap, data.allReflections || []);
+                    setAllProgressData(progressGraph, totalStarsMap, data.allReflections || [], data.submissions || []);
                 }
              } catch(e) {
                  console.error("Failed to load admin dashboard data from server", e);
@@ -4550,6 +4731,16 @@ export default function AdminPage() {
                     >
                         <span className="material-symbols-outlined group-hover:scale-110 transition-transform text-white">school</span>
                         <span className={`font-medium ${currentView === 'learners' ? 'text-white' : 'text-white/80 group-hover:text-white'}`}>Learners</span>
+                    </button>}
+                    {hasViewAccess('submissions') && <button
+                        onClick={() => setCurrentView('submissions')}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg w-full text-left transition-all group ${currentView === 'submissions'
+                            ? 'bg-admin-secondary shadow-lg shadow-admin-secondary/20'
+                            : 'hover:bg-white/10 text-white/80 hover:text-white'
+                            }`}
+                    >
+                        <span className="material-symbols-outlined group-hover:scale-110 transition-transform text-white">upload_file</span>
+                        <span className={`font-medium ${currentView === 'submissions' ? 'text-white' : 'text-white/80 group-hover:text-white'}`}>Submissions</span>
                     </button>}
                     {hasViewAccess('reflection') && <button
                         onClick={() => setCurrentView('reflection')}
@@ -4644,6 +4835,7 @@ export default function AdminPage() {
                         <h2 className="text-2xl font-bold text-white tracking-tight">
                             {currentView === 'dashboard' ? 'Dashboard Overview' :
                                 currentView === 'learners' ? 'Learners' :
+                                    currentView === 'submissions' ? 'Submissions' :
                                     currentView === 'progress' ? 'Course Progress' :
                                     currentView === 'reflection' ? 'Reflection' :
                                     currentView.charAt(0).toUpperCase() + currentView.slice(1)}
@@ -4808,6 +5000,15 @@ export default function AdminPage() {
                             onUpdateStudent={updateStudent}
                         />
                     )}
+                    {currentView === 'submissions' && (
+                        <SubmissionManagement
+                            courses={courses}
+                            registeredStudents={registeredStudents}
+                            submissions={submissions}
+                            isSubAdmin={isSubAdmin}
+                            accessibleCourseIds={user?.courseIds}
+                        />
+                    )}
                     {currentView === 'progress' && (
                         <CourseProgressManagement
                             courses={courses}
@@ -4825,6 +5026,7 @@ export default function AdminPage() {
                             courses={courses}
                             registeredStudents={registeredStudents}
                             reflections={reflections}
+                            onDeleteReflection={deleteReflection}
                             isSubAdmin={isSubAdmin}
                             accessibleCourseIds={user?.courseIds}
                         />
@@ -4859,7 +5061,7 @@ export default function AdminPage() {
                     {currentView === 'settings' && (
                         <SettingsManagement />
                     )}
-                    {currentView !== 'dashboard' && currentView !== 'learners' && currentView !== 'progress' && currentView !== 'reflection' && currentView !== 'class' && currentView !== 'assessments' && currentView !== 'marketplace' && currentView !== 'subadmins' && currentView !== 'settings' && (
+                    {currentView !== 'dashboard' && currentView !== 'learners' && currentView !== 'submissions' && currentView !== 'progress' && currentView !== 'reflection' && currentView !== 'class' && currentView !== 'assessments' && currentView !== 'marketplace' && currentView !== 'subadmins' && currentView !== 'settings' && (
                         <div className="flex items-center justify-center h-full text-gray-500">
                             Component for {currentView} is under construction.
                         </div>

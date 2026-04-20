@@ -104,6 +104,30 @@ function initializeDatabase() {
             )
         `);
 
+        db.run(`
+            CREATE TABLE IF NOT EXISTS submissions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id TEXT NOT NULL,
+                student_name TEXT,
+                course_id TEXT NOT NULL,
+                course_title TEXT,
+                stage_id TEXT NOT NULL,
+                stage_title TEXT,
+                mission_id TEXT,
+                mission_title TEXT,
+                difficulty TEXT NOT NULL,
+                original_file_name TEXT NOT NULL,
+                stored_file_name TEXT NOT NULL,
+                file_path TEXT NOT NULL,
+                mime_type TEXT,
+                file_size INTEGER NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'pending',
+                feedback TEXT NOT NULL DEFAULT '',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         db.run(
             `
                 INSERT OR IGNORE INTO users (id, password, name, role)

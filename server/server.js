@@ -1,9 +1,15 @@
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 const db = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const UPLOADS_DIR = path.resolve(__dirname, 'uploads', 'submissions');
+const MAX_SUBMISSION_BYTES = 20 * 1024 * 1024;
+
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const parseCourseIds = (value) => {
     try {
@@ -15,6 +21,7 @@ const parseCourseIds = (value) => {
 };
 
 const formatReflectionRow = (row) => ({
+    id: row.id,
     studentId: row.student_id,
     courseId: row.course_id,
     stageId: row.stage_id,
@@ -38,8 +45,44 @@ const parseJsonField = (value, fallback) => {
 
 const APP_STATE_KEYS = new Set(['courses', 'assessments', 'marketplace', 'badges']);
 
+const sanitizeFileName = (fileName) => {
+    const fallback = 'submission';
+    if (!fileName || typeof fileName !== 'string') return fallback;
+    return fileName.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim() || fallback;
+};
+
+const formatSubmissionRow = (row) => ({
+    id: row.id,
+    studentId: row.student_id,
+    studentName: row.student_name || '',
+    courseId: row.course_id,
+    courseTitle: row.course_title || '',
+    stageId: row.stage_id,
+    stageTitle: row.stage_title || '',
+    missionId: row.mission_id || '',
+    missionTitle: row.mission_title || '',
+    difficulty: row.difficulty,
+    fileName: row.original_file_name,
+    fileSize: row.file_size || 0,
+    mimeType: row.mime_type || '',
+    status: row.status || 'pending',
+    feedback: row.feedback || '',
+    timestamp: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+    downloadUrl: `/api/admin/submissions/${row.id}/download`,
+});
+
+const removeStoredFile = (filePath) => {
+    if (!filePath) return;
+
+    fs.unlink(filePath, (err) => {
+        if (err && err.code !== 'ENOENT') {
+            console.error('Failed to remove submission file:', err.message);
+        }
+    });
+};
+
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 app.get('/', (req, res) => {
     res.json({ message: 'StarQuest Server is running!' });
@@ -183,10 +226,15 @@ app.get('/api/progress/:studentId', (req, res) => {
             db.all(`SELECT * FROM reflections WHERE student_id = ? ORDER BY created_at DESC`, [studentId], (err3, reflections) => {
                 if (err3) return res.status(500).json({ error: err3.message });
 
-                return res.json({
-                    progress: progressGraph,
-                    totalStars: stats ? stats.total_stars : 0,
-                    reflections: (reflections || []).map(formatReflectionRow),
+                db.all(`SELECT * FROM submissions WHERE student_id = ? ORDER BY created_at DESC`, [studentId], (err4, submissions) => {
+                    if (err4) return res.status(500).json({ error: err4.message });
+
+                    return res.json({
+                        progress: progressGraph,
+                        totalStars: stats ? stats.total_stars : 0,
+                        reflections: (reflections || []).map(formatReflectionRow),
+                        submissions: (submissions || []).map(formatSubmissionRow),
+                    });
                 });
             });
         });
@@ -324,6 +372,158 @@ app.post('/api/progress/spend-stars', (req, res) => {
     });
 });
 
+app.post('/api/submissions', (req, res) => {
+    const {
+        studentId,
+        studentName,
+        courseId,
+        courseTitle,
+        stageId,
+        stageTitle,
+        missionId,
+        missionTitle,
+        difficulty,
+        fileName,
+        fileType,
+        fileSize,
+        fileData,
+    } = req.body || {};
+
+    if (!studentId || !courseId || !stageId || !difficulty || !fileName || !fileData) {
+        return res.status(400).json({ success: false, message: 'Missing required submission fields' });
+    }
+
+    const numericFileSize = Number.parseInt(fileSize, 10);
+    if (!Number.isInteger(numericFileSize) || numericFileSize <= 0 || numericFileSize > MAX_SUBMISSION_BYTES) {
+        return res.status(400).json({ success: false, message: 'Invalid submission file size' });
+    }
+
+    let fileBuffer;
+    try {
+        fileBuffer = Buffer.from(fileData, 'base64');
+    } catch {
+        return res.status(400).json({ success: false, message: 'Invalid submission file payload' });
+    }
+
+    if (!fileBuffer.length || fileBuffer.length > MAX_SUBMISSION_BYTES) {
+        return res.status(400).json({ success: false, message: 'Submission file is too large' });
+    }
+
+    const safeOriginalName = sanitizeFileName(fileName);
+    const extension = path.extname(safeOriginalName);
+    const storedFileName = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}${extension}`;
+    const storedFilePath = path.join(UPLOADS_DIR, storedFileName);
+
+    fs.writeFile(storedFilePath, fileBuffer, (writeErr) => {
+        if (writeErr) {
+            return res.status(500).json({ success: false, error: writeErr.message });
+        }
+
+        db.run(
+            `
+                INSERT INTO submissions (
+                    student_id,
+                    student_name,
+                    course_id,
+                    course_title,
+                    stage_id,
+                    stage_title,
+                    mission_id,
+                    mission_title,
+                    difficulty,
+                    original_file_name,
+                    stored_file_name,
+                    file_path,
+                    mime_type,
+                    file_size,
+                    status,
+                    feedback,
+                    updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', '', CURRENT_TIMESTAMP)
+            `,
+            [
+                studentId,
+                studentName || '',
+                courseId,
+                courseTitle || '',
+                stageId,
+                stageTitle || '',
+                missionId || '',
+                missionTitle || '',
+                difficulty,
+                safeOriginalName,
+                storedFileName,
+                storedFilePath,
+                fileType || '',
+                numericFileSize,
+            ],
+            function insertSubmissionCallback(dbErr) {
+                if (dbErr) {
+                    removeStoredFile(storedFilePath);
+                    return res.status(500).json({ success: false, error: dbErr.message });
+                }
+
+                db.get(`SELECT * FROM submissions WHERE id = ?`, [this.lastID], (selectErr, row) => {
+                    if (selectErr) {
+                        return res.status(500).json({ success: false, error: selectErr.message });
+                    }
+
+                    return res.json({
+                        success: true,
+                        submission: row ? formatSubmissionRow(row) : null,
+                    });
+                });
+            }
+        );
+    });
+});
+
+app.delete('/api/admin/reflections/:reflectionId', (req, res) => {
+    const reflectionId = Number.parseInt(req.params.reflectionId, 10);
+
+    if (!Number.isInteger(reflectionId) || reflectionId <= 0) {
+        return res.status(400).json({ success: false, message: 'Invalid reflection ID' });
+    }
+
+    db.run(`DELETE FROM reflections WHERE id = ?`, [reflectionId], function deleteReflectionCallback(err) {
+        if (err) {
+            return res.status(500).json({ success: false, error: err.message });
+        }
+
+        if (this.changes === 0) {
+            return res.status(404).json({ success: false, message: 'Reflection not found' });
+        }
+
+        return res.json({ success: true, reflectionId });
+    });
+});
+
+app.get('/api/admin/submissions/:submissionId/download', (req, res) => {
+    const submissionId = Number.parseInt(req.params.submissionId, 10);
+
+    if (!Number.isInteger(submissionId) || submissionId <= 0) {
+        return res.status(400).json({ success: false, message: 'Invalid submission ID' });
+    }
+
+    db.get(`SELECT * FROM submissions WHERE id = ?`, [submissionId], (err, row) => {
+        if (err) {
+            return res.status(500).json({ success: false, error: err.message });
+        }
+
+        if (!row) {
+            return res.status(404).json({ success: false, message: 'Submission not found' });
+        }
+
+        return res.download(row.file_path, row.original_file_name, (downloadErr) => {
+            if (downloadErr && !res.headersSent) {
+                return res.status(500).json({ success: false, error: downloadErr.message });
+            }
+            return undefined;
+        });
+    });
+});
+
 app.post('/api/admin/students/upsert', (req, res) => {
     const {
         studentId,
@@ -454,16 +654,24 @@ app.post('/api/admin/change-password', (req, res) => {
 });
 
 app.post('/api/admin/reset-progress', (req, res) => {
-    db.serialize(() => {
-        db.run(`DELETE FROM progress`);
-        db.run(`DELETE FROM reflections`);
-        db.run(`DELETE FROM student_stats`);
-        db.run(`DELETE FROM badges`, (err) => {
-            if (err) {
-                return res.status(500).json({ success: false, error: err.message });
-            }
+    db.all(`SELECT file_path FROM submissions`, [], (selectErr, rows) => {
+        if (selectErr) {
+            return res.status(500).json({ success: false, error: selectErr.message });
+        }
 
-            return res.json({ success: true });
+        db.serialize(() => {
+            db.run(`DELETE FROM progress`);
+            db.run(`DELETE FROM reflections`);
+            db.run(`DELETE FROM student_stats`);
+            db.run(`DELETE FROM submissions`);
+            db.run(`DELETE FROM badges`, (err) => {
+                if (err) {
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+
+                (rows || []).forEach((row) => removeStoredFile(row.file_path));
+                return res.json({ success: true });
+            });
         });
     });
 });
@@ -494,19 +702,24 @@ app.get('/api/admin/dashboard', (req, res) => {
                 db.all(`SELECT * FROM reflections ORDER BY created_at DESC`, [], (err4, reflections) => {
                     if (err4) return res.status(500).json({ error: err4.message });
 
-                    return res.json({
-                        success: true,
-                        students: students.map(student => ({
-                            studentId: student.id,
-                            name: student.name,
-                            password: student.password,
-                            courseIds: parseCourseIds(student.courseIds),
-                            grade: student.grade || 1,
-                            admissionYear: student.admission_year || new Date().getFullYear(),
-                            totalStars: statsMap[student.id] || 0,
-                            progress: progressGraph[student.id] || {},
-                        })),
-                        allReflections: reflections.map(formatReflectionRow),
+                    db.all(`SELECT * FROM submissions ORDER BY created_at DESC`, [], (err5, submissions) => {
+                        if (err5) return res.status(500).json({ error: err5.message });
+
+                        return res.json({
+                            success: true,
+                            students: students.map(student => ({
+                                studentId: student.id,
+                                name: student.name,
+                                password: student.password,
+                                courseIds: parseCourseIds(student.courseIds),
+                                grade: student.grade || 1,
+                                admissionYear: student.admission_year || new Date().getFullYear(),
+                                totalStars: statsMap[student.id] || 0,
+                                progress: progressGraph[student.id] || {},
+                            })),
+                            allReflections: reflections.map(formatReflectionRow),
+                            submissions: (submissions || []).map(formatSubmissionRow),
+                        });
                     });
                 });
             });

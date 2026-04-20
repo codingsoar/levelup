@@ -2219,3 +2219,95 @@ pm run build -> Success
 
 ### Notes
 - Enroll modal and enrolled-student table now use the same ordering rule, so the before/after enrollment views stay consistent.
+
+## 2026-04-13 - Admin Reflection Deletion
+
+### Request
+- Allow admins to delete reflections written by students.
+
+### Scope
+- Admin reflection UI in `src/pages/AdminPage.jsx`.
+- Reflection delete flow in `src/stores/useProgressStore.js`.
+- Backend delete endpoint and reflection row formatting in `server/server.js`.
+
+### Implemented
+- Added reflection `id` to server-formatted reflection payloads.
+- Added `DELETE /api/admin/reflections/:reflectionId` to remove a reflection from SQLite.
+- Added `deleteReflection` to the progress store to call the server and remove the deleted entry from local state.
+- Added per-reflection delete buttons in the admin reflection view with confirmation and failure feedback.
+
+### Validation
+- `npx eslint src\pages\AdminPage.jsx src\stores\useProgressStore.js` -> Success
+- `node --check server\server.js` -> Success
+
+### Files
+- `src/pages/AdminPage.jsx`
+- `src/stores/useProgressStore.js`
+- `server/server.js`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Deletion is keyed by the reflection table primary key, so older cached reflection entries without an `id` cannot be deleted until the current server payload is reloaded.
+
+## 2026-04-20 - Student Submission Upload And Admin Download
+
+### Request
+- Make student practice submissions upload actual files so admins can download them from the admin page.
+
+### Scope
+- Backend submission file storage and metadata persistence.
+- Student practice upload flow and admin submission download UI.
+- No grading/review status workflow beyond storing and listing uploaded files.
+
+### Implemented
+- Added SQLite `submissions` table and server-side file storage under `server/uploads/submissions`.
+- Added `POST /api/submissions` to save uploaded files plus submission metadata, and `GET /api/admin/submissions/:submissionId/download` to download a stored file.
+- Extended `/api/progress/:studentId` and `/api/admin/dashboard` to include submission data.
+- Updated progress reset to delete submission rows and stored files.
+- Changed student practice submission to upload the actual selected file to the server before mission completion.
+- Added an admin `Submissions` view with course filtering and per-file download buttons.
+
+### Validation
+- `node --check server/server.js` -> Success
+- `node --check server/database.js` -> Success
+- `npx eslint src/stores/useProgressStore.js src/pages/StudentDashboardPage.jsx src/pages/AdminPage.jsx` -> Success
+- `npm run build` -> Failed in sandbox (`spawn EPERM`)
+- `npm run build` (escalated) -> Success
+
+### Files
+- `server/database.js`
+- `server/server.js`
+- `src/stores/useProgressStore.js`
+- `src/pages/StudentDashboardPage.jsx`
+- `src/pages/AdminPage.jsx`
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- This task continued on top of existing in-progress edits already present in `server/server.js`, `src/pages/AdminPage.jsx`, and `src/stores/useProgressStore.js`; those changes were preserved.
+- Current upload path accepts files up to 20 MB and uses base64-over-JSON transport, so very large CAD files may still need a future multipart upload path if requirements grow.
+
+## 2026-04-20 - Push Submission Upload And Reflection Deletion Changes
+
+### Request
+- Commit the current workspace changes and push `main` to `origin`.
+
+### Scope
+- Git state management and remote sync for the current backend/frontend admin progress changes.
+- No new product behavior beyond the already modified files.
+
+### Implemented
+- Reviewed current status and diffs before sync.
+- Recorded the push handoff for the current submission upload/admin download and reflection deletion changes.
+- Prepared the current workspace changes for commit and push.
+
+### Validation
+- `git status --short --branch` -> Success
+- `git diff -- server/database.js server/server.js src/stores/useProgressStore.js src/pages/StudentDashboardPage.jsx src/pages/AdminPage.jsx ANTIGRAVITY_WORKLOG.md` -> Success
+- `git commit` -> Pending
+- `git push origin main` -> Pending
+
+### Files
+- `ANTIGRAVITY_WORKLOG.md`
+
+### Notes
+- Commit includes the already-present reflection deletion changes together with the student submission upload/admin download work.

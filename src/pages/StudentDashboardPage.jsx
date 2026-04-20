@@ -8,6 +8,8 @@ import { Button, Card, CardBody, Progress, Modal, ModalContent, ModalBody } from
 import { ChevronLeft, Star, Upload, ChevronRight, Check, Play, BookOpen } from 'lucide-react';
 import StudentHeaderActions from '../components/StudentHeaderActions';
 
+const MAX_SUBMISSION_BYTES = 20 * 1024 * 1024;
+
 export default function StudentDashboardPage() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -181,18 +183,23 @@ export default function StudentDashboardPage() {
         closeReflectionModal();
     };
 
-    const handlePracticeSubmit = (file) => {
-        addSubmission({
+    const handlePracticeSubmit = async (file) => {
+        const result = await addSubmission({
             studentId: user?.studentId,
             studentName: user?.name,
             courseId: selectedCourseId,
+            courseTitle: selectedCourse?.title || '',
             stageId: selectedStageId,
-            missionId: selectedMission.id,
+            stageTitle: selectedStage?.title || '',
+            missionId: selectedMission?.id || '',
+            missionTitle: selectedMission?.title || '',
             difficulty: selectedDifficulty,
-            fileName: file.name,
-            fileSize: file.size,
-        });
+        }, file);
+        if (!result?.success) {
+            return result;
+        }
         handleMissionComplete();
+        return result;
     };
 
     // --- Sub-components for Mission Views (ported from MissionPage) ---
@@ -479,6 +486,8 @@ export default function StudentDashboardPage() {
     const PracticeView = ({ mission, onSubmit }) => {
         const [file, setFile] = useState(null);
         const [submitted, setSubmitted] = useState(false);
+        const [isUploading, setIsUploading] = useState(false);
+        const [uploadError, setUploadError] = useState('');
         if (submitted) {
             return (
                 <Card className="text-center p-12 space-y-4 shadow-xl border border-slate-200">
@@ -498,9 +507,42 @@ export default function StudentDashboardPage() {
                     <label className="flex flex-col items-center justify-center p-10 border-2 border-dashed border-slate-300 rounded-2xl hover:border-primary cursor-pointer transition-colors bg-slate-50/50">
                         <Upload size={40} className="text-slate-400 mb-2" />
                         <span className="text-slate-600 font-medium">{file ? file.name : 'Click to select project file'}</span>
-                        <input type="file" className="hidden" onChange={e => setFile(e.target.files?.[0])} />
+                        <input
+                            type="file"
+                            className="hidden"
+                            onChange={(e) => {
+                                const nextFile = e.target.files?.[0] || null;
+                                setUploadError('');
+                                if (nextFile && nextFile.size > MAX_SUBMISSION_BYTES) {
+                                    setFile(null);
+                                    setUploadError('File is too large. Please upload a file smaller than 20 MB.');
+                                    return;
+                                }
+                                setFile(nextFile);
+                            }}
+                        />
                     </label>
-                    <Button color="primary" fullWidth className="h-12 text-lg font-bold" isDisabled={!file} onPress={() => { onSubmit(file); setSubmitted(true); }}>Submit Assignment</Button>
+                    {uploadError && <p className="text-sm text-red-500">{uploadError}</p>}
+                    <Button
+                        color="primary"
+                        fullWidth
+                        className="h-12 text-lg font-bold"
+                        isDisabled={!file || isUploading}
+                        onPress={async () => {
+                            if (!file || isUploading) return;
+                            setIsUploading(true);
+                            setUploadError('');
+                            const result = await onSubmit(file);
+                            setIsUploading(false);
+                            if (result?.success) {
+                                setSubmitted(true);
+                            } else {
+                                setUploadError(result?.message || 'Failed to upload assignment.');
+                            }
+                        }}
+                    >
+                        {isUploading ? 'Uploading...' : 'Submit Assignment'}
+                    </Button>
                 </Card>
             </div>
         );
